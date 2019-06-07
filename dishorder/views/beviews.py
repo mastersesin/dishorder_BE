@@ -2,10 +2,20 @@ from flask import request, jsonify, Blueprint, abort
 from .functions import *
 from .return_msg import ReturnMSG
 from .sql_query import *
-import datetime
+from dishorder import app, db
+from dishorder.views.models import Users, Photos
 import calendar
 
 dishorderapi = Blueprint('dishorderapi', __name__)
+
+
+@dishorderapi.route('/products')
+def products():
+    db.session.add(Users(email_address="example@example.com", password="hihi", first_name="ty", photo_default_id=0,
+                         creation_date="2015-09-01T16:34:02", last_connection_date="2015-09-01T16:34:02", profile=0,
+                         family_name="", photo_thumbnail=b""))
+    db.session.commit()
+    return "hihi"
 
 
 @dishorderapi.route('/login', methods=['POST'])
@@ -14,18 +24,22 @@ def login():
         email = request.json.get('email')
         password = request.json.get('password')
         print(email)
+        print(password)
         if not email or not password:
             return jsonify(ReturnMSG().wrong_post_format)
         else:
-            data_return_from_sql = [record for record in login_check(email_address=email, password=password)]
-            if len(data_return_from_sql) == 1:
-                print(data_return_from_sql[0])
-                user_id, email_address, password, first_name, family_name, photo_thumbnail, photo_default_id, \
-                creation_date, last_connection_date, profile = data_return_from_sql[0]
-                msg = ReturnMSG().return_token
-                msg['msg'] = generate_auth_token(user_id=user_id, profile=profile)
-                return jsonify(msg)
-            elif len(data_return_from_sql) == 0:
+            users_object = Users.query.filter_by(email_address='example@example.com')
+            print(users_object.first().password)
+            if users_object.count() == 1:
+                users_object = users_object[0]  # GET First Record
+                if users_object.password == password:
+                    msg = ReturnMSG().return_token
+                    msg['msg'] = generate_auth_token(user_id=users_object.id,
+                                                     profile=users_object.profile)
+                    return jsonify(msg)
+                else:
+                    return jsonify(ReturnMSG().username_or_password_incorrect)
+            elif users_object.count() == 0:
                 return jsonify(ReturnMSG().username_or_password_incorrect)
             else:
                 abort(500)
@@ -63,7 +77,7 @@ def dishes():
     for record in all_dishes:
         print(record)
         dish_id, supplier_code, dish_type_code, dish_code, dish_description, unit_price, \
-            currency, review, popularity, created_date, created_by, photo_thumbnail, photo_default_id \
+        currency, review, popularity, created_date, created_by, photo_thumbnail, photo_default_id \
             = [value for value in record]
         msg['msg'][dish_id] = {'supplier_code': supplier_code, 'dish_code': dish_code, 'popularity': popularity,
                                'photo_default_id': photo_default_id, 'unit_price': unit_price}
@@ -86,31 +100,3 @@ def create_dish1(guard_msg):
         print('ok')
     else:
         print('not ok')
-
-
-@app.route('/ldap')
-def hello_world():
-    print(request.args.get('from'))
-    # first_day_of_month_count_from_monday_of_previous_month
-    date = calendar.monthrange(2019, 5)[0]
-    # month have ? day
-    month_have = calendar.monthrange(2019, 5)[1]
-    previous_month_have = calendar.monthrange(2019, 4)[1]
-    msg = {'previous_month': {}, 'this_month': {}}
-    for i in range(previous_month_have - date + 1, previous_month_have + 1):
-        msg['previous_month'][i] = i
-    for i in range(1, month_have + 1):
-        msg['this_month'][i] = i
-    print(msg)
-    return jsonify(msg)
-
-
-@app.route('/suppliers')
-def hello_world2():
-    msg = {}
-    for i in range(1, 3):
-        if i == 1:
-            msg[i] = "TML Restaurant"
-        if i == 2:
-            msg[i] = "HKT Restaurant"
-    return jsonify(msg)
