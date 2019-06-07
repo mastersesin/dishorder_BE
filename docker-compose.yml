@@ -1,0 +1,26 @@
+version: '3'
+
+volumes:
+  postgres_db_data: {}
+
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/code
+    environment:
+      FLASK_ENV: development
+  redis:
+    image: "redis:alpine"
+  postgres:
+    build: ./compose/postgres
+    container_name: "postgres_order"
+    ports:
+      - "5430:5432"
+    env_file:
+      - ./compose/.env/.local/.postgres
+    volumes:
+      - postgres_db_data:/var/lib/postgresql/data
