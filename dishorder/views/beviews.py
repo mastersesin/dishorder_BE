@@ -1,25 +1,55 @@
-from flask import request, jsonify, Blueprint, abort
+from flask import request, jsonify, Blueprint, abort, flash, request, redirect, url_for
 from .functions import *
 from .return_msg import ReturnMSG
-from .sql_query import *
-from dishorder import db
+from dishorder import session
 from .models import *
 import calendar
 import pytz
 from datetime import datetime
 import sys
+from werkzeug.utils import secure_filename
+import os
 
 dishorderapi = Blueprint('dishorderapi', __name__)
 tz = pytz.timezone('Asia/Saigon')
 
 
+@dishorderapi.route('/upload', methods=['POST'])
+def upload():
+    print(request.files, file=sys.stderr)
+    # check if the post request has the file part
+    if 'file' not in request.files:
+        msg = ReturnMSG().no_file_part
+        return jsonify(msg)
+    file = request.files['file']
+    # if user does not select file, browser also
+    # submit a empty part without filename
+    if file.filename == '':
+        msg = ReturnMSG().no_selected_file
+        return jsonify(msg)
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        msg = ReturnMSG().upload_successfully
+        return jsonify(msg)
+
+
 @dishorderapi.route('/test', methods=['GET'])
 def test():
-    new_user = Users(email_address='test', password='123', first_name='Ty', family_name='', photo_thumbnail=b'',
-                     photo_default_id=1, creation_date=0, last_connection_date=0, profile=0)
-    db.session.add(new_user)
-    db.session.commit()
-    return 'hihi'
+    print('fuck', file=sys.stderr)
+    msg = ReturnMSG().no_selected_file
+    return jsonify(msg)
+
+
+@dishorderapi.route('/suppliers')
+def hello_world2():
+    msg = {}
+    for i in range(1, 3):
+        if i == 1:
+            msg[i] = "TML Restaurant"
+        if i == 2:
+            msg[i] = "HKT Restaurant"
+    return jsonify(msg)
 
 
 @dishorderapi.route('/products', methods=['GET'])
@@ -42,12 +72,12 @@ def products():
 @dishorderapi.route('/login', methods=['POST'])
 def login():
     if request.is_json:
-        email_address = request.json.get('email')
+        email_address = request.json.get('email_address')
         password = request.json.get('password')
         if not email_address or not password:
             return jsonify(ReturnMSG().wrong_post_format)
         else:
-            users_object = Users.query.filter_by(email_address=email_address)
+            users_object = session.query(Users).filter_by(email_address=email_address)
             if users_object.count() == 1:
                 users_object = users_object[0]  # GET First Record
                 if users_object.password == password:
@@ -73,21 +103,20 @@ def register():
         first_name = request.json.get('first_name')
         family_name = request.json.get('family_name', None)
         photo_thumbnail = b''
-        photo_default_id = 0
+        photo_default_id = 1
         creation_date = datetime.now(tz).timestamp()
         last_connection_date = 0
         profile = 0
-        print(email_address, password, first_name, file=sys.stderr)
         if not email_address or not password or not first_name:
             return jsonify(ReturnMSG().wrong_post_format)
         else:
-            # new_user = Users(email_address=email_address, password=password, first_name=first_name,
-            #                  family_name=family_name,
-            #                  photo_thumbnail=photo_thumbnail, photo_default_id=photo_default_id,
-            #                  creation_date=creation_date,
-            #                  last_connection_date=last_connection_date, profile=profile)
-            # db.session.add(new_user)
-            # db.session.commit()
+            new_user = Users(email_address=email_address, password=password, first_name=first_name,
+                             family_name=family_name,
+                             photo_thumbnail=photo_thumbnail, photo_default_id=photo_default_id,
+                             creation_date=creation_date,
+                             last_connection_date=last_connection_date, profile=profile)
+            session.add(new_user)
+            session.commit()
             return jsonify(ReturnMSG().register_success)
     else:
         return jsonify(ReturnMSG().wrong_post_format)
@@ -121,7 +150,28 @@ def create_dish(guard_msg):
 
 
 @dishorderapi.route('/create-supplier', methods=['GET'])
-def get_supplier():
-
-    # print(suppliers, file=sys.stderr)
-    return 'hihi'
+def create_supplier():
+    if request.is_json:
+        code = request.json.get('code')
+        name = request.json.get('name')
+        email_address = request.json.get('email_address')
+        phone = request.json.get('phone')
+        contact_name = request.json.get('contact_name')
+        photo_thumbnail = b''
+        photo_default_id = 2
+        order_time_deadline = datetime.now(tz).timestamp()
+        last_connection_date = 0
+        profile = 0
+        if not email_address or not password or not first_name:
+            return jsonify(ReturnMSG().wrong_post_format)
+        else:
+            new_user = Users(email_address=email_address, password=password, first_name=first_name,
+                             family_name=family_name,
+                             photo_thumbnail=photo_thumbnail, photo_default_id=photo_default_id,
+                             creation_date=creation_date,
+                             last_connection_date=last_connection_date, profile=profile)
+            session.add(new_user)
+            session.commit()
+            return jsonify(ReturnMSG().register_success)
+    else:
+        return jsonify(ReturnMSG().wrong_post_format)

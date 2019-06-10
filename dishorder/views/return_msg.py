@@ -11,6 +11,9 @@ class ReturnMSG:
         self.token_expired = {"code": 13, "msg": "Token Expired"}
         self.return_coupons_of_card = {"code": 12, "msg": {}}
         self.logout = {"code": 13, "msg": "Logout successfully."}
+        self.no_file_part = {"code": 14, "msg": "No file part."}
+        self.no_selected_file = {"code": 15, "msg": "No selected file."}
+        self.upload_successfully = {"code": 16, "msg": "Upload successfully."}
 
     def register_success(self):
         return self.register_success
@@ -41,3 +44,12 @@ class ReturnMSG:
 
     def logout(self):
         return self.logout
+
+    def no_file_part(self):
+        return self.no_file_part
+
+    def no_selected_file(self):
+        return self.no_selected_file
+
+    def upload_successfully(self):
+        return self.upload_successfully

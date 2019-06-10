@@ -4,6 +4,11 @@ from functools import wraps
 from flask import request
 
 
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+
+
 def generate_auth_token(**kwargs):
     user_id = kwargs.get('user_id')
     profile = kwargs.get('profile')

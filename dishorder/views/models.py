@@ -1,12 +1,14 @@
-from dishorder import db
+from sqlalchemy import Column, Integer, String, LargeBinary, ForeignKey, REAL
+from sqlalchemy.orm import relationship
+from dishorder import Base
 
 
-class Photos(db.Model):
+class Photos(Base):
     __tablename__ = 'photo'
-    id = db.Column(db.Integer, primary_key=True)
-    photo_type = db.Column(db.String, nullable=False)
-    type_id = db.Column(db.Integer)
-    path = db.Column(db.String)
+    id = Column(Integer, primary_key=True)
+    photo_type = Column(String, nullable=False)
+    type_id = Column(Integer)
+    path = Column(String)
 
     def __init__(self, photo_type, type_id, path):
         self.photo_type = photo_type
@@ -17,19 +19,19 @@ class Photos(db.Model):
         return '<Photos %d>' % self.id
 
 
-class Users(db.Model):
+class Users(Base):
     __tablename__ = 'user'
-    id = db.Column(db.Integer, primary_key=True)
-    email_address = db.Column(db.String, unique=True, nullable=False)
-    password = db.Column(db.String, nullable=False)
-    first_name = db.Column(db.String, nullable=False)
-    family_name = db.Column(db.String)
-    photo_thumbnail = db.Column(db.LargeBinary)
-    photo_default_id = db.Column(db.Integer, db.ForeignKey('photo.id'), default=0, nullable=False)
-    photo_default_id_relationship = db.relationship("Photos", backref='user')
-    creation_date = db.Column(db.Integer, default=0, nullable=False)
-    last_connection_date = db.Column(db.Integer, default=0, nullable=False)
-    profile = db.Column(db.Integer, default=0)
+    id = Column(Integer, primary_key=True)
+    email_address = Column(String, unique=True, nullable=False)
+    password = Column(String, nullable=False)
+    first_name = Column(String, nullable=False)
+    family_name = Column(String)
+    photo_thumbnail = Column(LargeBinary)
+    photo_default_id = Column(Integer, ForeignKey('photo.id'), default=0, nullable=False)
+    photo_default_id_relationship = relationship('Photos', backref='user')
+    creation_date = Column(Integer, default=0, nullable=False)
+    last_connection_date = Column(Integer, default=0, nullable=False)
+    profile = Column(Integer, default=0)
 
     def __init__(self, email_address, password, first_name, family_name, photo_thumbnail, photo_default_id,
                  creation_date, last_connection_date, profile):
@@ -47,22 +49,22 @@ class Users(db.Model):
         return '<User %d>' % self.id
 
 
-class Suppliers(db.Model):
+class Suppliers(Base):
     __tablename__ = 'supplier'
-    code = db.Column(db.String, nullable=False, primary_key=True)
-    name = db.Column(db.String, nullable=False)
-    email_address = db.Column(db.String, unique=True, nullable=False)
-    phone = db.Column(db.String)
-    contact_name = db.Column(db.String)
-    photo_thumbnail = db.Column(db.LargeBinary)
-    photo_default_id = db.Column(db.Integer, db.ForeignKey('photo.id'), default=0, nullable=False)
-    supplier_photo_default_id_relationship = db.relationship('Photos', backref='supplier')
-    order_time_deadline = db.Column(db.Integer, nullable=False)
-    minimum_order_quantity = db.Column(db.Integer, default=1)
-    minimum_order_amount = db.Column(db.REAL, default=0)
-    currency = db.Column(db.String, default='VND', nullable=False)
-    review = db.Column(db.Integer, default=0, nullable=False)
-    popularity = db.Column(db.Integer, default=0, nullable=False)
+    code = Column(String, nullable=False, primary_key=True)
+    name = Column(String, nullable=False)
+    email_address = Column(String, unique=True, nullable=False)
+    phone = Column(String)
+    contact_name = Column(String)
+    photo_thumbnail = Column(LargeBinary)
+    photo_default_id = Column(Integer, ForeignKey('photo.id'), default=0, nullable=False)
+    supplier_photo_default_id_relationship = relationship('Photos', backref='supplier')
+    order_time_deadline = Column(Integer, nullable=False)
+    minimum_order_quantity = Column(Integer, default=1)
+    minimum_order_amount = Column(REAL, default=0)
+    currency = Column(String, default='VND', nullable=False)
+    review = Column(Integer, default=0, nullable=False)
+    popularity = Column(Integer, default=0, nullable=False)
 
     def __init__(self, code, name, email_address, phone, contact_name,
                  photo_thumbnail,
@@ -87,23 +89,23 @@ class Suppliers(db.Model):
         return '<Supplier %d>' % self.code
 
 
-class Dishes(db.Model):
+class Dishes(Base):
     __tablename__ = 'dish'
-    dish_id = db.Column(db.Integer, nullable=False, primary_key=True)
-    supplier_code = db.Column(db.String, db.ForeignKey('supplier.code'), nullable=False)
-    supplier_code_relationship = db.relationship('Suppliers', backref='dishes')
-    dish_type_code = db.Column(db.String, unique=True, nullable=False)
-    dish_code = db.Column(db.String, unique=True, nullable=False)
-    dish_description = db.Column(db.String)
-    unit_price = db.Column(db.String)
-    currency = db.Column(db.String, default='VND', nullable=False)
-    review = db.Column(db.Integer, default=0, nullable=False)
-    popularity = db.Column(db.Integer, default=0, nullable=False)
-    created_date = db.Column(db.Integer, default=0)
-    created_by = db.Column(db.Integer, default=0, nullable=False)
-    photo_thumbnail = db.Column(db.LargeBinary)
-    photo_default_id = db.Column(db.Integer, db.ForeignKey('photo.id'), default=0, nullable=False)
-    dishes_photo_default_id_relationship = db.relationship('Photos', backref='dishes')
+    dish_id = Column(Integer, nullable=False, primary_key=True)
+    supplier_code = Column(String, ForeignKey('supplier.code'), nullable=False)
+    supplier_code_relationship = relationship('Suppliers', backref='dishes')
+    dish_type_code = Column(String, unique=True, nullable=False)
+    dish_code = Column(String, unique=True, nullable=False)
+    dish_description = Column(String)
+    unit_price = Column(String)
+    currency = Column(String, default='VND', nullable=False)
+    review = Column(Integer, default=0, nullable=False)
+    popularity = Column(Integer, default=0, nullable=False)
+    created_date = Column(Integer, default=0)
+    created_by = Column(Integer, default=0, nullable=False)
+    photo_thumbnail = Column(LargeBinary)
+    photo_default_id = Column(Integer, ForeignKey('photo.id'), default=0, nullable=False)
+    dishes_photo_default_id_relationship = relationship('Photos', backref='dishes')
 
     def __init__(self, dish_id, supplier_code, dish_type_code, dish_code, dish_description,
                  unit_price, created_by, review, popularity, created_date, currency):
@@ -125,11 +127,11 @@ class Dishes(db.Model):
         return '<Supplier %d>' % self.code
 
 
-class DishTags(db.Model):
+class DishTags(Base):
     __tablename__ = 'dish_tag'
-    dish_id = db.Column(db.Integer, db.ForeignKey('dish.dish_id'), primary_key=True, nullable=False)
-    dish_id_relationship = db.relationship('Dishes', backref='dish_tag')
-    tags_name = db.Column(db.String, primary_key=True, nullable=False)
+    dish_id = Column(Integer, ForeignKey('dish.dish_id'), primary_key=True, nullable=False)
+    dish_id_relationship = relationship('Dishes', backref='dish_tag')
+    tags_name = Column(String, primary_key=True, nullable=False)
 
     def __init__(self, dish_id, tags_name):
         self.dish_id = dish_id
@@ -139,24 +141,24 @@ class DishTags(db.Model):
         return '<TAG %d>' % self.tags_name
 
 
-class CustomerOrders(db.Model):
+class CustomerOrders(Base):
     __tablename__ = 'customer_order'
-    customer_order_id = db.Column(db.Integer, nullable=False, primary_key=True)
-    order_id = db.Column(db.Integer, db.ForeignKey('user.id'), default=0, nullable=False)
-    order_id_relationship = db.relationship('Users', backref='customer_order')
-    order_date = db.Column(db.Integer, nullable=False)
-    user_id = db.Column(db.Integer, nullable=False)
-    on_behalf_of_customer = db.Column(db.String, nullable=False)
-    dish_id = db.Column(db.Integer, db.ForeignKey('dish.dish_id'), nullable=False)
-    dish_id_relationship = db.relationship('Dishes', backref='customer_order')
-    quantity = db.Column(db.Integer, default=1, nullable=False)
-    unit_price = db.Column(db.REAL, nullable=False)
-    currency = db.Column(db.String, default='VND', nullable=False)
-    personal_comment = db.Column(db.String)
-    created_date = db.Column(db.Integer, nullable=False)
-    created_by = db.Column(db.Integer, nullable=False)
-    review = db.Column(db.Integer, default=0, nullable=False)
-    review_comment = db.Column(db.String)
+    customer_order_id = Column(Integer, nullable=False, primary_key=True)
+    order_id = Column(Integer, ForeignKey('user.id'), default=0, nullable=False)
+    order_id_relationship = relationship('Users', backref='customer_order')
+    order_date = Column(Integer, nullable=False)
+    user_id = Column(Integer, nullable=False)
+    on_behalf_of_customer = Column(String, nullable=False)
+    dish_id = Column(Integer, ForeignKey('dish.dish_id'), nullable=False)
+    dish_id_relationship = relationship('Dishes', backref='customer_order')
+    quantity = Column(Integer, default=1, nullable=False)
+    unit_price = Column(REAL, nullable=False)
+    currency = Column(String, default='VND', nullable=False)
+    personal_comment = Column(String)
+    created_date = Column(Integer, nullable=False)
+    created_by = Column(Integer, nullable=False)
+    review = Column(Integer, default=0, nullable=False)
+    review_comment = Column(String)
 
     def __init__(self, customer_order_id, order_id, order_date, user_id, on_behalf_of_customer, dish_id, quantity
                  , unit_price, currency, personal_comment, created_date, created_by, review, review_comment):
@@ -179,19 +181,19 @@ class CustomerOrders(db.Model):
         return '<CustomerOrdersNUM %d>' % self.customer_order_id
 
 
-class OrdersToSuppliers(db.Model):
+class OrdersToSuppliers(Base):
     __tablename__ = 'order_to_supplier'
-    order_id = db.Column(db.Integer, nullable=False, primary_key=True)
-    supplier_code = db.Column(db.String, db.ForeignKey('supplier.code'), nullable=False)
-    supplier_code_relationship = db.relationship('Suppliers', backref='order_to_supplier')
-    order_date = db.Column(db.Integer, nullable=False)
-    delivery_address = db.Column(db.String, nullable=False)
-    total_amount = db.Column(db.REAL, nullable=False)
-    currency = db.Column(db.String, default='VND', nullable=False)
-    order_comment = db.Column(db.String)
-    created_date = db.Column(db.Integer, nullable=False)
-    created_by = db.Column(db.Integer, nullable=False)
-    sent_date = db.Column(db.Integer, nullable=False)
+    order_id = Column(Integer, nullable=False, primary_key=True)
+    supplier_code = Column(String, ForeignKey('supplier.code'), nullable=False)
+    supplier_code_relationship = relationship('Suppliers', backref='order_to_supplier')
+    order_date = Column(Integer, nullable=False)
+    delivery_address = Column(String, nullable=False)
+    total_amount = Column(REAL, nullable=False)
+    currency = Column(String, default='VND', nullable=False)
+    order_comment = Column(String)
+    created_date = Column(Integer, nullable=False)
+    created_by = Column(Integer, nullable=False)
+    sent_date = Column(Integer, nullable=False)
 
     def __init__(self, order_id, supplier_code, order_date, delivery_address, total_amount, currency, order_comment
                  , created_date, created_by, sent_date):
