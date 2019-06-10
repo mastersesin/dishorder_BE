@@ -2,34 +2,52 @@ from flask import request, jsonify, Blueprint, abort
 from .functions import *
 from .return_msg import ReturnMSG
 from .sql_query import *
-from dishorder import app, db
-from dishorder.views.models import Users, Photos
+from dishorder import db
+from .models import *
 import calendar
+import pytz
+from datetime import datetime
+import sys
 
 dishorderapi = Blueprint('dishorderapi', __name__)
+tz = pytz.timezone('Asia/Saigon')
 
 
-@dishorderapi.route('/products')
-def products():
-    db.session.add(Users(email_address="example@example.com", password="hihi", first_name="ty", photo_default_id=0,
-                         creation_date="2015-09-01T16:34:02", last_connection_date="2015-09-01T16:34:02", profile=0,
-                         family_name="", photo_thumbnail=b""))
+@dishorderapi.route('/test', methods=['GET'])
+def test():
+    new_user = Users(email_address='test', password='123', first_name='Ty', family_name='', photo_thumbnail=b'',
+                     photo_default_id=1, creation_date=0, last_connection_date=0, profile=0)
+    db.session.add(new_user)
     db.session.commit()
-    return "hihi"
+    return 'hihi'
+
+
+@dishorderapi.route('/products', methods=['GET'])
+def products():
+    print(request.args.get('from'))
+    # first_day_of_month_count_from_monday_of_previous_month
+    date = calendar.monthrange(2019, 6)[0]
+    # month have ? day
+    month_have = calendar.monthrange(2019, 6)[1]
+    previous_month_have = calendar.monthrange(2019, 5)[1]
+    msg = {'previous_month': {}, 'this_month': {}}
+    for i in range(previous_month_have - date + 1, previous_month_have + 1):
+        msg['previous_month'][i] = i
+    for i in range(1, month_have + 1):
+        msg['this_month'][i] = i
+    print(msg)
+    return jsonify(msg)
 
 
 @dishorderapi.route('/login', methods=['POST'])
 def login():
     if request.is_json:
-        email = request.json.get('email')
+        email_address = request.json.get('email')
         password = request.json.get('password')
-        print(email)
-        print(password)
-        if not email or not password:
+        if not email_address or not password:
             return jsonify(ReturnMSG().wrong_post_format)
         else:
-            users_object = Users.query.filter_by(email_address='example@example.com')
-            print(users_object.first().password)
+            users_object = Users.query.filter_by(email_address=email_address)
             if users_object.count() == 1:
                 users_object = users_object[0]  # GET First Record
                 if users_object.password == password:
@@ -50,17 +68,26 @@ def login():
 @dishorderapi.route('/register', methods=['POST'])
 def register():
     if request.is_json:
-        email = request.json.get('email')
+        email_address = request.json.get('email_address')
         password = request.json.get('password')
         first_name = request.json.get('first_name')
-        if not email or not password or not first_name:
+        family_name = request.json.get('family_name', None)
+        photo_thumbnail = b''
+        photo_default_id = 0
+        creation_date = datetime.now(tz).timestamp()
+        last_connection_date = 0
+        profile = 0
+        print(email_address, password, first_name, file=sys.stderr)
+        if not email_address or not password or not first_name:
             return jsonify(ReturnMSG().wrong_post_format)
-        # --------------------
-        # Validation step
-        # --------------------
-        # PASS it for now because we don`t have much time
         else:
-            add_user(email_address=email, password=password, first_name=first_name)
+            # new_user = Users(email_address=email_address, password=password, first_name=first_name,
+            #                  family_name=family_name,
+            #                  photo_thumbnail=photo_thumbnail, photo_default_id=photo_default_id,
+            #                  creation_date=creation_date,
+            #                  last_connection_date=last_connection_date, profile=profile)
+            # db.session.add(new_user)
+            # db.session.commit()
             return jsonify(ReturnMSG().register_success)
     else:
         return jsonify(ReturnMSG().wrong_post_format)
@@ -93,10 +120,8 @@ def create_dish(guard_msg):
         print('not ok')
 
 
-@dishorderapi.route('/createsupplier', methods=['POST'])
-@login_required
-def create_dish1(guard_msg):
-    if request.is_json:
-        print('ok')
-    else:
-        print('not ok')
+@dishorderapi.route('/create-supplier', methods=['GET'])
+def get_supplier():
+
+    # print(suppliers, file=sys.stderr)
+    return 'hihi'
