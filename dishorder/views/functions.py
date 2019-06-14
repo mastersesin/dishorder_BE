@@ -1,7 +1,22 @@
 from itsdangerous import (TimedJSONWebSignatureSerializer as Serializer, BadSignature, SignatureExpired)
 from dishorder import app
 from functools import wraps
-from flask import request
+from flask import request, jsonify
+import cv2
+
+
+def deduplicate_image(img1_path, img2_path):
+    original = cv2.imread(img1_path)
+    duplicated = cv2.imread(img2_path)
+    if original.shape == duplicated.shape:
+        difference = cv2.subtract(original, duplicated)
+        b, g, r = cv2.split(difference)
+        if cv2.countNonZero(b) == 0 and cv2.countNonZero(g) == 0 and cv2.countNonZero(r) == 0:
+            return True
+        else:
+            return False
+    else:
+        return False
 
 
 def allowed_file(filename):

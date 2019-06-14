@@ -8,7 +8,7 @@ class Photos(Base):
     id = Column(Integer, primary_key=True)
     photo_type = Column(String, nullable=False)
     type_id = Column(Integer)
-    path = Column(String)
+    path = Column(String, unique=True, nullable=False)
 
     def __init__(self, photo_type, type_id, path):
         self.photo_type = photo_type
@@ -86,7 +86,25 @@ class Suppliers(Base):
         self.popularity = popularity
 
     def __repr__(self):
-        return '<Supplier %d>' % self.code
+        return '<Supplier %s>' % self.code
+
+    @property
+    def serializable(self):
+        return {
+            'code': self.code,
+            'name': self.name,
+            'email_address': self.email_address,
+            'phone': self.phone,
+            'contact_name': self.contact_name,
+            'photo_thumbnail': self.photo_thumbnail,
+            'photo_default_id': self.photo_default_id,
+            'order_time_deadline': self.order_time_deadline,
+            'minimum_order_quantity': self.minimum_order_quantity,
+            'minimum_order_amount': self.minimum_order_amount,
+            'currency': self.currency,
+            'review': self.review,
+            'popularity': self.popularity
+        }
 
 
 class Dishes(Base):
