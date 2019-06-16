@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, LargeBinary, ForeignKey, REAL
 from sqlalchemy.orm import relationship
 from dishorder import Base
+from .functions import *
 
 
 class Photos(Base):
@@ -96,9 +97,10 @@ class Suppliers(Base):
             'email_address': self.email_address,
             'phone': self.phone,
             'contact_name': self.contact_name,
-            'photo_thumbnail': self.photo_thumbnail,
+            'photo_thumbnail': '',  # self.photo_thumbnail,
             'photo_default_id': self.photo_default_id,
-            'order_time_deadline': self.order_time_deadline,
+            # 'photo_default_id': self.photo_default_id,
+            'order_time_deadline': timestamp_to_hour_minute(self.order_time_deadline),
             'minimum_order_quantity': self.minimum_order_quantity,
             'minimum_order_amount': self.minimum_order_amount,
             'currency': self.currency,

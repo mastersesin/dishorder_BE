@@ -14,7 +14,7 @@ class ReturnMSG:
         self.no_file_part = {"code": 14, "msg": "No file part."}
         self.no_selected_file = {"code": 15, "msg": "No selected file."}
         self.upload_successfully = {"code": 16, "msg": "Upload successfully."}
-        self.return_supplier_list = {"code": 17, "msg": ""}
+        self.return_supplier_list = {"code": 17, "msg": {}}
 
     def register_success(self):
         return self.register_success

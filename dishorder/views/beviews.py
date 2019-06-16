@@ -5,14 +5,12 @@ from .return_msg import ReturnMSG
 from dishorder import session
 from .models import *
 import calendar
-import pytz
-from datetime import datetime
 from werkzeug.utils import secure_filename
 import sys
 import os
+from sqlalchemy import update
 
 dishorderapi = Blueprint('dishorderapi', __name__)
-tz = pytz.timezone('Asia/Saigon')
 
 
 @dishorderapi.route('/img/<img_name>', methods=['GET'])
@@ -41,12 +39,14 @@ def upload():
         return jsonify(msg)
 
 
-@dishorderapi.route('/test', methods=['POST'])
+@dishorderapi.route('/test', methods=['PUT'])
 def test():
-    msg = ReturnMSG().no_selected_file
-    print(flask.request.is_json, file=sys.stderr)
-    msg['msg'] = str(request)
-    return jsonify(msg)
+    if request.is_json:
+        print('hihi')
+        sup = session.query(Suppliers).first()
+        sup.code = 'TMLSSS'
+        session.commit()
+    return 'hihi'
 
 
 @dishorderapi.route('/suppliers')
@@ -54,7 +54,11 @@ def suppliers():
     msg = ReturnMSG().return_supplier_list
     all_suppliers = session.query(Suppliers).all()
     for supplier in all_suppliers:
-        msg['msg'] += str(supplier.serializable)
+        photo_object = session.query(Photos).filter(Photos.id == supplier.photo_default_id).first()
+        msg['msg'][str(supplier.code)] = supplier.serializable
+        msg['msg'][str(supplier.code)]['image_URL'] = app.config['API_ADDRESS'] + \
+                                                      app.config['IMG_URI'] + \
+                                                      photo_object.path
     return jsonify(msg)
     # msg = {}
     # for i in range(1, 3):
@@ -117,7 +121,7 @@ def register():
         family_name = request.json.get('family_name', None)
         photo_thumbnail = b''
         photo_default_id = 1
-        creation_date = datetime.now(tz).timestamp()
+        creation_date = app.config['TIMEZONE']
         last_connection_date = 0
         profile = 0
         if not email_address or not password or not first_name:
@@ -180,12 +184,11 @@ def create_supplier():
         session.commit()
         uploaded_img_id = session.query(Photos).filter_by(path=uploaded_img_name).first().id
         photo_default_id = uploaded_img_id
-        order_time_deadline = datetime.now(tz).timestamp()
-        minimum_order_quantity = 0
-        minimum_order_amount = 0
+        order_time_deadline = hour_minute_to_timestamp(request.json.get('order_time_deadline'))
+        minimum_order_quantity = request.json.get('min_quantity')
+        minimum_order_amount = request.json.get('min_amount')
         review = 0
         popularity = 0
-        print(code, name, email_address, currency)
         if not code or not name or not email_address or not currency:
             return jsonify(ReturnMSG().wrong_post_format)
         else:
@@ -198,6 +201,54 @@ def create_supplier():
             session.add(new_supplier)
             session.commit()
             print(new_supplier)
+            return jsonify(ReturnMSG().register_success)
+    else:
+        return jsonify(ReturnMSG().wrong_post_format)
+
+
+@dishorderapi.route('/edit-supplier', methods=['PUT'])
+def edit_supplier():
+    if request.is_json:
+        current_code = request.json.get('current_code')
+        code_change_to = request.json.get('code_change_to')
+        name = request.json.get('name')
+        email_address = request.json.get('email_address')
+        phone = request.json.get('phone')
+        contact_name = request.json.get('contact_name')
+        currency = request.json.get('currency')
+        uploaded_img_name = request.json.get('uploaded_img_name')
+        print(uploaded_img_name)
+        if uploaded_img_name:
+            new_supplier_photo = Photos(photo_type='supplier',
+                                        type_id=0,
+                                        path=uploaded_img_name)
+            session.add(new_supplier_photo)
+            session.commit()
+            uploaded_img_id = session.query(Photos).filter_by(path=uploaded_img_name).first().id
+            photo_default_id = uploaded_img_id
+        else:
+            photo_default_id = None
+        order_time_deadline = hour_minute_to_timestamp(request.json.get('order_time_deadline'))
+        minimum_order_quantity = request.json.get('min_quantity')
+        minimum_order_amount = request.json.get('min_amount')
+        if not code_change_to or not name or not email_address or not currency:
+            return jsonify(ReturnMSG().wrong_post_format)
+        else:
+            supplier_need_to_edit = session.query(Suppliers).filter_by(code=current_code).first()
+            supplier_need_to_edit.code = code_change_to
+            supplier_need_to_edit.name = name
+            supplier_need_to_edit.email_address = email_address
+            supplier_need_to_edit.phone = phone
+            supplier_need_to_edit.contact_name = contact_name
+            supplier_need_to_edit.currency = currency
+            supplier_need_to_edit.order_time_deadline = order_time_deadline
+            supplier_need_to_edit.minimum_order_quantity = minimum_order_quantity
+            supplier_need_to_edit.minimum_order_amount = minimum_order_amount
+            if photo_default_id:
+                supplier_need_to_edit.photo_default_id = photo_default_id
+            else:
+                pass
+            session.commit()
             return jsonify(ReturnMSG().register_success)
     else:
         return jsonify(ReturnMSG().wrong_post_format)

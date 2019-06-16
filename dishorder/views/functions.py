@@ -59,3 +59,16 @@ def login_required(f):
             return f({'guard_msg': 'Warning'})
 
     return decorated_function
+
+
+def hour_minute_to_timestamp(string_hour_minute):
+    hour, minute = string_hour_minute.split(':')
+    total_second = (int(hour) * 60 * 60) + (int(minute) * 60)
+    return total_second
+
+
+def timestamp_to_hour_minute(int_second):
+    base_hour_with_odd = int_second / 60
+    base_hour = base_hour_with_odd / 60
+    base_minute = base_hour_with_odd % 60
+    return '{}:{}'.format(int(base_hour), int(base_minute))
