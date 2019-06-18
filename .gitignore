@@ -1,4 +1,5 @@
 __pycache__
 .idea
-uploads
+*/uploads/*
 venv
+!*/uploads/insert-picture-icon.png
