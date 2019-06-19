@@ -67,25 +67,6 @@ class Suppliers(Base):
     review = Column(Integer, default=0, nullable=False)
     popularity = Column(Integer, default=0, nullable=False)
 
-    def __init__(self, code, name, email_address, phone, contact_name,
-                 photo_thumbnail,
-                 photo_default_id, order_time_deadline, minimum_order_quantity,
-                 minimum_order_amount,
-                 currency, review, popularity):
-        self.code = code
-        self.name = name
-        self.email_address = email_address
-        self.phone = phone
-        self.contact_name = contact_name
-        self.photo_thumbnail = photo_thumbnail
-        self.photo_default_id = photo_default_id
-        self.order_time_deadline = order_time_deadline
-        self.minimum_order_quantity = minimum_order_quantity
-        self.minimum_order_amount = minimum_order_amount
-        self.currency = currency
-        self.review = review
-        self.popularity = popularity
-
     def __repr__(self):
         return '<Supplier %s>' % self.code
 
@@ -99,7 +80,6 @@ class Suppliers(Base):
             'contact_name': self.contact_name,
             'photo_thumbnail': '',  # self.photo_thumbnail,
             'photo_default_id': self.photo_default_id,
-            # 'photo_default_id': self.photo_default_id,
             'order_time_deadline': timestamp_to_hour_minute(self.order_time_deadline),
             'minimum_order_quantity': self.minimum_order_quantity,
             'minimum_order_amount': self.minimum_order_amount,
@@ -114,8 +94,9 @@ class Dishes(Base):
     dish_id = Column(Integer, nullable=False, primary_key=True)
     supplier_code = Column(String, ForeignKey('supplier.code'), nullable=False)
     supplier_code_relationship = relationship('Suppliers', backref='dishes')
-    dish_type_code = Column(String, unique=True, nullable=False)
-    dish_code = Column(String, unique=True, nullable=False)
+    dish_name = Column(String, unique=True, nullable=False)
+    dish_tag_id = Column(Integer, ForeignKey('dish_tag.id'), nullable=False)
+    dish_tag_id_relationship = relationship('DishTags', backref='dish')
     dish_description = Column(String)
     unit_price = Column(String)
     currency = Column(String, default='VND', nullable=False)
@@ -127,38 +108,55 @@ class Dishes(Base):
     photo_default_id = Column(Integer, ForeignKey('photo.id'), default=0, nullable=False)
     dishes_photo_default_id_relationship = relationship('Photos', backref='dishes')
 
-    def __init__(self, dish_id, supplier_code, dish_type_code, dish_code, dish_description,
-                 unit_price, created_by, review, popularity, created_date, currency):
-        self.dish_id = dish_id
-        self.supplier_code = supplier_code
-        self.dish_type_code = dish_type_code
-        self.dish_code = dish_code
-        self.dish_description = dish_description
-        self.unit_price = unit_price
-        self.currency = currency
-        self.review = review
-        self.popularity = popularity
-        self.created_date = created_date
-        self.created_by = created_by
-        self.review = review
-        self.popularity = popularity
+    # def __init__(self, dish_id, supplier_code, dish_type_code, dish_code, dish_description,
+    #              unit_price, created_by, review, popularity, created_date, currency):
+    #     self.dish_id = dish_id
+    #     self.supplier_code = supplier_code
+    #     self.dish_type_code = dish_type_code
+    #     self.dish_code = dish_code
+    #     self.dish_description = dish_description
+    #     self.unit_price = unit_price
+    #     self.currency = currency
+    #     self.review = review
+    #     self.popularity = popularity
+    #     self.created_date = created_date
+    #     self.created_by = created_by
+    #     self.review = review
+    #     self.popularity = popularity
 
     def __repr__(self):
-        return '<Supplier %d>' % self.code
+        return '<Dish %d>' % self.dish_id
+
+    @property
+    def serializable(self):
+        return {
+            'dish_id': self.dish_id,
+            'supplier_code': self.supplier_code,
+            'dish_name': self.dish_name,
+            'dish_tag_id': self.dish_tag_id,
+            'dish_description': self.dish_description,
+            'unit_price': self.unit_price,
+            'photo_default_id': self.photo_default_id,
+            'currency': self.currency,
+            'review': self.review,
+            'popularity': self.popularity,
+            'created_date': self.created_date,
+            'created_by': self.created_by,
+            'photo_default_id': self.photo_default_id
+        }
 
 
 class DishTags(Base):
     __tablename__ = 'dish_tag'
-    dish_id = Column(Integer, ForeignKey('dish.dish_id'), primary_key=True, nullable=False)
-    dish_id_relationship = relationship('Dishes', backref='dish_tag')
-    tags_name = Column(String, primary_key=True, nullable=False)
+    id = Column(Integer, primary_key=True, nullable=False, unique=True)
+    tags_name = Column(String, nullable=False, unique=True, )
 
-    def __init__(self, dish_id, tags_name):
-        self.dish_id = dish_id
-        self.tags_name = tags_name
+    # def __init__(self, dish_id, tags_name):
+    #     self.dish_id = dish_id
+    #     self.tags_name = tags_name
 
     def __repr__(self):
-        return '<TAG %d>' % self.tags_name
+        return '<TAG %s>' % self.tags_name
 
 
 class CustomerOrders(Base):
