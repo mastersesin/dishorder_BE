@@ -126,8 +126,13 @@ def login():
 @dishorderapi.route('/register', methods=['POST'])
 def register():
     if request.is_json:
-        email_address = request.json.get('email_address')
-        password = request.json.get('password')
+        email_address = request.json.get('email_address', '')
+        is_email_address_existed = session.query(Users).filter(Users.email_address == email_address).first()
+        if is_email_address_existed:
+            msg = ReturnMSG().fail_cheat
+            msg['msg'] = 'Email address {} existed'.format(email_address)
+            return jsonify(msg)
+        password = request.json.get('password', '')
         first_name = request.json.get('first_name')
         family_name = request.json.get('family_name', None)
         photo_thumbnail = b''
@@ -143,9 +148,15 @@ def register():
                              photo_thumbnail=photo_thumbnail, photo_default_id=photo_default_id,
                              creation_date=creation_date,
                              last_connection_date=last_connection_date, profile=profile)
-            session.add(new_user)
-            session.commit()
-            return jsonify(ReturnMSG().register_success)
+            validation_return = new_user.validation
+            if not validation_return == "True":
+                msg = ReturnMSG().fail_cheat
+                msg['msg'] = validation_return
+                return jsonify(msg)
+            else:
+                session.add(new_user)
+                session.commit()
+                return jsonify(ReturnMSG().register_success)
     else:
         return jsonify(ReturnMSG().wrong_post_format)
 
@@ -161,8 +172,8 @@ def dishes():
             .join(Suppliers, Dishes.supplier_code == Suppliers.code) \
             .join(Photos, Dishes.photo_default_id == Photos.id) \
             .join(DishTags, Dishes.dish_tag_id == DishTags.id) \
-            .filter(Dishes.dish_name.like('%' + dish_name_sort + '%'))\
-            .filter(Suppliers.code.like(suppliers_sort))\
+            .filter(Dishes.dish_name.like('%' + dish_name_sort + '%')) \
+            .filter(Suppliers.code.like(suppliers_sort)) \
             .filter(DishTags.tags_name.like(tag_sort)).all()
     else:
         all_dishes = session.query(Dishes, Suppliers, Photos, DishTags) \
@@ -184,8 +195,14 @@ def edit_dish():
     if request.is_json:
         dish_id = request.json.get('dish_id')
         supplier = request.json.get('supplier')
-        print(supplier)
         dish_name = request.json.get('dish_name')
+        current_dish_name = session.query(Dishes).filter(Dishes.dish_id == dish_id).first()
+        if current_dish_name.dish_name != dish_name:
+            check_dish_name = session.query(Dishes).filter_by(dish_name=dish_name).first()
+            if check_dish_name:
+                msg = ReturnMSG().fail_cheat
+                msg['msg'] = 'Dish name {} existed'.format(check_dish_name.dish_name)
+                return jsonify(msg)
         dish_tag = request.json.get('dish_tag')
         dish_tag_id_query_from_input_dish_tag = session.query(DishTags).filter(
             DishTags.tags_name == dish_tag.title()).first()
@@ -197,7 +214,8 @@ def edit_dish():
             session.commit()
             dish_tag_id = new_dish_tag.id
         dish_description = request.json.get('dish_description')
-        unit_price = request.json.get('unit_price')
+        unit_price = request.json.get('unit_price', -1)
+        unit_price = int(unit_price)
         currency = request.json.get('currency')
         uploaded_img_name = request.json.get('uploaded_img_name')
         need_to_update_this_dish = session.query(Dishes).filter(Dishes.dish_id == dish_id).first()
@@ -211,25 +229,44 @@ def edit_dish():
             photo_default_id = uploaded_img_id
         else:
             photo_default_id = need_to_update_this_dish.photo_default_id
-        need_to_update_this_dish.supplier_code = supplier
-        need_to_update_this_dish.dish_name = dish_name
-        need_to_update_this_dish.dish_tag_id = dish_tag_id
-        need_to_update_this_dish.dish_description = dish_description
-        need_to_update_this_dish.unit_price = unit_price
-        need_to_update_this_dish.currency = currency
-        need_to_update_this_dish.photo_default_id = photo_default_id
-        session.commit()
-        return jsonify(ReturnMSG().register_success)
+        new_dish = Dishes(supplier_code=supplier, dish_name=dish_name, dish_tag_id=dish_tag_id,
+                          dish_description=dish_description, unit_price=unit_price, currency=currency,
+                          review=0, popularity=0, created_date=0, created_by=0,
+                          photo_thumbnail=b'', photo_default_id=photo_default_id)
+        validation_return = new_dish.validation
+        if not validation_return == "True":
+            msg = ReturnMSG().fail_cheat
+            msg['msg'] = validation_return
+            return jsonify(msg)
+        else:
+            need_to_update_this_dish.supplier_code = supplier
+            need_to_update_this_dish.dish_name = dish_name
+            need_to_update_this_dish.dish_tag_id = dish_tag_id
+            need_to_update_this_dish.dish_description = dish_description
+            need_to_update_this_dish.unit_price = unit_price
+            need_to_update_this_dish.currency = currency
+            need_to_update_this_dish.photo_default_id = photo_default_id
+            session.commit()
+            return jsonify(ReturnMSG().register_success)
     else:
-        jsonify(ReturnMSG().wrong_post_format)
+        return jsonify(ReturnMSG().wrong_post_format)
 
 
 @dishorderapi.route('/create-dish', methods=['POST'])
 def create_dish():
     if request.is_json:
-        supplier_code = request.json.get('supplier')
-        dish_name = request.json.get('dish_name')
-        dish_tag = request.json.get('dish_tag')
+        supplier_code = request.json.get('supplier', '')
+        dish_name = request.json.get('dish_name', '')
+        is_dish_name_existed = session.query(Dishes).filter(Dishes.dish_name == dish_name).first()
+        if is_dish_name_existed:
+            msg = ReturnMSG().fail_cheat
+            msg['msg'] = 'Supplier code {} existed'.format(dish_name)
+            return jsonify(msg)
+        dish_tag = request.json.get('dish_tag', '')
+        if not dish_tag:
+            msg = ReturnMSG().fail_cheat
+            msg['msg'] = 'Dish tag contain invalid character or missing'
+            return jsonify(msg)
         dish_tag_id_query_from_input_dish_tag = session.query(DishTags).filter(
             DishTags.tags_name == dish_tag.title()).first()
         if dish_tag_id_query_from_input_dish_tag:
@@ -240,8 +277,9 @@ def create_dish():
             session.commit()
             dish_tag_id = new_dish_tag.id
         dish_description = request.json.get('dish_description')
-        unit_price = request.json.get('unit_price')
-        currency = request.json.get('currency')
+        unit_price = request.json.get('unit_price', -1)
+        unit_price = int(unit_price)
+        currency = request.json.get('currency', '')
         review = 0
         popularity = 0
         created_date = app.config['TIMESTAMP_NOW_GMT7']
@@ -262,9 +300,15 @@ def create_dish():
                           dish_description=dish_description, unit_price=unit_price, currency=currency,
                           review=review, popularity=popularity, created_date=created_date, created_by=created_by,
                           photo_thumbnail=photo_thumbnail, photo_default_id=photo_default_id)
-        session.add(new_dish)
-        session.commit()
-        return jsonify(ReturnMSG().register_success)
+        validation_return = new_dish.validation
+        if not validation_return == "True":
+            msg = ReturnMSG().fail_cheat
+            msg['msg'] = validation_return
+            return jsonify(msg)
+        else:
+            session.add(new_dish)
+            session.commit()
+            return jsonify(ReturnMSG().register_success)
     else:
         return jsonify(ReturnMSG().wrong_post_format)
 
@@ -272,11 +316,22 @@ def create_dish():
 @dishorderapi.route('/create-supplier', methods=['POST'])
 def create_supplier():
     if request.is_json:
-        code = request.json.get('code')
-        name = request.json.get('name')
-        email_address = request.json.get('email_address')
-        phone = request.json.get('phone')
-        contact_name = request.json.get('contact_name')
+        # Supplier code get json and validate if it existed
+        code = request.json.get('code', '')
+        is_code_existed = session.query(Suppliers).filter(Suppliers.code == code).first()
+        if is_code_existed:
+            msg = ReturnMSG().fail_cheat
+            msg['msg'] = 'Supplier code {} existed'.format(code)
+            return jsonify(msg)
+        name = request.json.get('name', '')
+        email_address = request.json.get('email_address', '')
+        is_email_existed = session.query(Suppliers).filter(Suppliers.email_address == email_address).first()
+        if is_email_existed:
+            msg = ReturnMSG().fail_cheat
+            msg['msg'] = 'Supplier email {} existed'.format(email_address)
+            return jsonify(msg)
+        phone = request.json.get('phone', '')
+        contact_name = request.json.get('contact_name', '')
         currency = request.json.get('currency')
         photo_thumbnail = b''
         uploaded_img_name = request.json.get('uploaded_img_name')
@@ -290,12 +345,12 @@ def create_supplier():
             photo_default_id = uploaded_img_id
         else:
             photo_default_id = 1
-        order_time_deadline = hour_minute_to_timestamp(request.json.get('order_time_deadline'))
-        minimum_order_quantity = request.json.get('min_quantity')
-        minimum_order_amount = request.json.get('min_amount')
+        order_time_deadline = hour_minute_to_timestamp(request.json.get('order_time_deadline', 0))
+        minimum_order_quantity = int(request.json.get('min_quantity', '-1'))
+        minimum_order_amount = int(request.json.get('min_amount', '-1'))
         review = 0
         popularity = 0
-        if not code or not name or not email_address or not currency:
+        if False:
             return jsonify(ReturnMSG().wrong_post_format)
         else:
             new_supplier = Suppliers(code=code, name=name, email_address=email_address, phone=phone,
@@ -304,10 +359,16 @@ def create_supplier():
                                      minimum_order_quantity=minimum_order_quantity,
                                      minimum_order_amount=minimum_order_amount,
                                      review=review, popularity=popularity)
-            session.add(new_supplier)
-            session.commit()
-            print(new_supplier)
-            return jsonify(ReturnMSG().register_success)
+            validation_return = new_supplier.validation
+            if not validation_return == "True":
+                msg = ReturnMSG().fail_cheat
+                msg['msg'] = validation_return
+                return jsonify(msg)
+            else:
+                # session.add(new_supplier)
+                # session.commit()
+                print(new_supplier)
+                return jsonify(ReturnMSG().register_success)
     else:
         return jsonify(ReturnMSG().wrong_post_format)
 
@@ -316,12 +377,29 @@ def create_supplier():
 def edit_supplier():
     if request.is_json:
         current_code = request.json.get('current_code')
-        code_change_to = request.json.get('code_change_to')
-        name = request.json.get('name')
-        email_address = request.json.get('email_address')
-        phone = request.json.get('phone')
-        contact_name = request.json.get('contact_name')
-        currency = request.json.get('currency')
+        code_change_to = request.json.get('code_change_to', '')
+        is_code_existed = session.query(Suppliers).filter(Suppliers.code == code_change_to).first()
+        if current_code != code_change_to:
+            if is_code_existed:
+                msg = ReturnMSG().fail_cheat
+                msg['msg'] = 'Supplier code {} existed'.format(code_change_to)
+                return jsonify(msg)
+            else:
+                pass
+        else:
+            pass
+        name = request.json.get('name', '')
+        email_address = request.json.get('email_address', '')
+        supplier_current_email = session.query(Suppliers).filter_by(email_address=email_address).first()
+        if supplier_current_email.email_address != email_address:
+            check_email = session.query(Suppliers).filter_by(email_address=email_address).first()
+            if check_email:
+                msg = ReturnMSG().fail_cheat
+                msg['msg'] = 'Supplier email {} existed'.format(email_address)
+                return jsonify(msg)
+        phone = request.json.get('phone', '')
+        contact_name = request.json.get('contact_name', '')
+        currency = request.json.get('currency', '')
         uploaded_img_name = request.json.get('uploaded_img_name')
         supplier_need_to_edit = session.query(Suppliers).filter_by(code=current_code).first()
         if uploaded_img_name:
@@ -334,27 +412,40 @@ def edit_supplier():
             photo_default_id = uploaded_img_id
         else:
             photo_default_id = supplier_need_to_edit.photo_default_id
-        order_time_deadline = hour_minute_to_timestamp(request.json.get('order_time_deadline'))
-        minimum_order_quantity = request.json.get('min_quantity')
-        minimum_order_amount = request.json.get('min_amount')
-        if not code_change_to or not name or not email_address or not currency:
+        order_time_deadline = hour_minute_to_timestamp(request.json.get('order_time_deadline', 0))
+        minimum_order_quantity = int(request.json.get('min_quantity', '-1'))
+        minimum_order_amount = int(request.json.get('min_amount', '-1'))
+        if False:
             return jsonify(ReturnMSG().wrong_post_format)
         else:
-            supplier_need_to_edit.code = code_change_to
-            supplier_need_to_edit.name = name
-            supplier_need_to_edit.email_address = email_address
-            supplier_need_to_edit.phone = phone
-            supplier_need_to_edit.contact_name = contact_name
-            supplier_need_to_edit.currency = currency
-            supplier_need_to_edit.order_time_deadline = order_time_deadline
-            supplier_need_to_edit.minimum_order_quantity = minimum_order_quantity
-            supplier_need_to_edit.minimum_order_amount = minimum_order_amount
-            if photo_default_id:
-                supplier_need_to_edit.photo_default_id = photo_default_id
+            new_supplier_check_obj = Suppliers(code=code_change_to, name=name, email_address=email_address, phone=phone,
+                                               contact_name=contact_name, photo_thumbnail=b'', currency=currency,
+                                               photo_default_id=photo_default_id,
+                                               order_time_deadline=order_time_deadline,
+                                               minimum_order_quantity=minimum_order_quantity,
+                                               minimum_order_amount=minimum_order_amount,
+                                               review=0, popularity=0)
+            validation_return = new_supplier_check_obj.validation
+            if not validation_return == "True":
+                msg = ReturnMSG().fail_cheat
+                msg['msg'] = validation_return
+                return jsonify(msg)
             else:
-                pass
-            session.commit()
-            return jsonify(ReturnMSG().register_success)
+                supplier_need_to_edit.code = code_change_to
+                supplier_need_to_edit.name = name
+                supplier_need_to_edit.email_address = email_address
+                supplier_need_to_edit.phone = phone
+                supplier_need_to_edit.contact_name = contact_name
+                supplier_need_to_edit.currency = currency
+                supplier_need_to_edit.order_time_deadline = order_time_deadline
+                supplier_need_to_edit.minimum_order_quantity = int(minimum_order_quantity)
+                supplier_need_to_edit.minimum_order_amount = int(minimum_order_amount)
+                if photo_default_id:
+                    supplier_need_to_edit.photo_default_id = photo_default_id
+                else:
+                    pass
+                session.commit()
+                return jsonify(ReturnMSG().register_success)
     else:
         return jsonify(ReturnMSG().wrong_post_format)
 
@@ -366,3 +457,69 @@ def get_tag():
     for tag in all_tag:
         msg['msg'][tag.id] = tag.tags_name
     return jsonify(msg)
+
+
+@dishorderapi.route('/get-dish-lay', methods=['GET'])
+def dishes_lay():
+    suppliers_sort = request.args.get('supplier', '')
+    suppliers_sort = [x for x in suppliers_sort.split(',') if x != '']
+    print(suppliers_sort)
+    tag_sort = request.args.get('tag_sort', '')
+    tag_sort = [x for x in tag_sort.split(',') if x != '']
+    msg = ReturnMSG().return_transaction_list
+    # if suppliers_sort or tag_sort:
+    all_dishes = session.query(Dishes, Suppliers, Photos, DishTags) \
+        .join(Suppliers, Dishes.supplier_code == Suppliers.code) \
+        .join(Photos, Dishes.photo_default_id == Photos.id) \
+        .join(DishTags, Dishes.dish_tag_id == DishTags.id)
+    if len(suppliers_sort) > 0 and len(tag_sort) == 0:
+        print('1')
+        record = all_dishes.filter(Suppliers.code.in_(suppliers_sort)).all()
+    elif len(tag_sort) > 0 and len(suppliers_sort) == 0:
+        print('2')
+        record = all_dishes.filter(DishTags.tags_name.in_(tag_sort)).all()
+    elif len(tag_sort) > 0 and len(suppliers_sort) > 0:
+        print('3')
+        record = all_dishes.filter(Suppliers.code.in_(suppliers_sort)) \
+            .filter(DishTags.tags_name.in_(tag_sort)).all()
+    else:
+        record = all_dishes.all()
+    for dish in record:
+        msg['msg'][dish[0].dish_id] = dish[0].serializable
+        msg['msg'][dish[0].dish_id]['supplier_name'] = dish[1].name
+        msg['msg'][dish[0].dish_id]['tags_name'] = dish[3].tags_name
+        msg['msg'][dish[0].dish_id]['image_URL'] = app.config['API_ADDRESS'] + \
+                                                   app.config['IMG_URI'] + \
+                                                   dish[2].path
+    return jsonify(msg)
+
+
+@dishorderapi.route('/foodorder', methods=['POST'])
+def food_order():
+    dishchoose = request.json.get('dishchoose')
+    for dish in dishchoose:
+        print(dishchoose[dish]['value'])
+        token = request.json.get('token')
+        order_id = decode_auth_token(token=token)['id']
+        print(order_id)
+        print(dishchoose)
+        order_date = app.config['TIMESTAMP_NOW_GMT7']
+        user_id = order_id
+        on_behalf_of_customer = dishchoose[dish]['onbehalf']
+        dish_id = dishchoose[dish]['key']
+        quantity = dishchoose[dish]['quantity']
+        unit_price = dishchoose[dish]['value']['unit_price']
+        currency = dishchoose[dish]['value']['currency']
+        created_date = app.config['TIMESTAMP_NOW_GMT7']
+        created_by = order_id
+        review = 0
+        review_comment = None
+        new_order = CustomerOrders(order_id=order_id,
+                                   order_date=order_date, user_id=user_id,
+                                   on_behalf_of_customer=on_behalf_of_customer, dish_id=dish_id,
+                                   quantity=quantity, unit_price=unit_price, currency=currency,
+                                   created_date=created_date, created_by=created_by, review=review,
+                                   review_comment=review_comment)
+        session.add(new_order)
+        session.commit()
+    return jsonify(ReturnMSG().register_success)

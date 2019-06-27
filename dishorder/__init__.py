@@ -9,6 +9,7 @@ import time
 import os
 import pytz
 from datetime import datetime
+import re
 
 app = Flask(__name__)
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://dishorder_PS:123456@postgres:5432/dishorder'
@@ -19,11 +20,12 @@ app.config['UPLOAD_FOLDER'] = os.getcwd() + '/dishorder/uploads'
 app.config['TIMESTAMP_NOW_GMT7'] = int(datetime.now(pytz.timezone('Asia/Saigon')).timestamp())
 app.config['API_ADDRESS'] = 'http://127.0.0.1:3001/'
 app.config['IMG_URI'] = 'img/'
+app.config['VALID_INPUT_STRING_REGEX_COMPILED'] = re.compile('^[a-zA-Z0-9]+[a-zA-Z0-9]$')
 # os.popen('mkdir {}/dishorder/uploads'.format(os.getcwd()))
 CORS(app)
 while True:
     try:
-        engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'], echo=True)
+        engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'], echo=False)
         Base = declarative_base()
         from dishorder.views import models
 

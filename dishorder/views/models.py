@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, LargeBinary, ForeignKey, REAL
 from sqlalchemy.orm import relationship
 from dishorder import Base
 from .functions import *
+import re
 
 
 class Photos(Base):
@@ -34,20 +35,21 @@ class Users(Base):
     last_connection_date = Column(Integer, default=0, nullable=False)
     profile = Column(Integer, default=0)
 
-    def __init__(self, email_address, password, first_name, family_name, photo_thumbnail, photo_default_id,
-                 creation_date, last_connection_date, profile):
-        self.email_address = email_address
-        self.password = password
-        self.first_name = first_name
-        self.family_name = family_name
-        self.photo_thumbnail = photo_thumbnail
-        self.photo_default_id = photo_default_id
-        self.creation_date = creation_date
-        self.last_connection_date = last_connection_date
-        self.profile = profile
-
     def __repr__(self):
         return '<User %d>' % self.id
+
+    @property
+    def validation(self):
+        password = re.compile('^[a-zA-Z0-9 ].+')
+        email_address = re.compile('[^@]+@[^@]+\.[^@]+')
+        first_name = re.compile('^[a-zA-Z ]+[a-zA-Z ]$')
+        if not email_address.match(self.email_address):
+            return "Email address contain invalid character or missing"
+        if not password.match(self.password):
+            return "Password contain invalid character or missing"
+        if not first_name.match(self.first_name):
+            return "First name contain invalid character or missing"
+        return "True"
 
 
 class Suppliers(Base):
@@ -69,6 +71,30 @@ class Suppliers(Base):
 
     def __repr__(self):
         return '<Supplier %s>' % self.code
+
+    @property
+    def validation(self):
+        code = re.compile('^[a-zA-Z0-9]+[a-zA-Z0-9]$')
+        name = re.compile('^[a-zA-Z0-9 ]+[a-zA-Z0-9 ]$')
+        phone = re.compile('^0\d{8,10}$')
+        email_address = re.compile('[^@]+@[^@]+\.[^@]+')
+        if not code.match(self.code):
+            return "Supplier code contain invalid character or missing"
+        if not name.match(self.name):
+            return "Supplier name contain invalid character or missing"
+        if not email_address.match(self.email_address):
+            return "Supplier email address contain invalid character or missing"
+        if not phone.match(self.phone):
+            return "Supplier phone contain invalid character or missing"
+        # if not name.match(self.contact_name):
+        #     return "Supplier contact name"
+        if self.minimum_order_quantity > 999999 or self.minimum_order_quantity < 0:
+            return "Minimum order quantity not in range 0-999999"
+        if self.minimum_order_amount > 999999 or self.minimum_order_amount < 0:
+            return "Minimum order amount not in range 0-999999"
+        if self.order_time_deadline == 0:
+            return "Order time deadline contain invalid character or missing"
+        return "True"
 
     @property
     def serializable(self):
@@ -108,24 +134,21 @@ class Dishes(Base):
     photo_default_id = Column(Integer, ForeignKey('photo.id'), default=0, nullable=False)
     dishes_photo_default_id_relationship = relationship('Photos', backref='dishes')
 
-    # def __init__(self, dish_id, supplier_code, dish_type_code, dish_code, dish_description,
-    #              unit_price, created_by, review, popularity, created_date, currency):
-    #     self.dish_id = dish_id
-    #     self.supplier_code = supplier_code
-    #     self.dish_type_code = dish_type_code
-    #     self.dish_code = dish_code
-    #     self.dish_description = dish_description
-    #     self.unit_price = unit_price
-    #     self.currency = currency
-    #     self.review = review
-    #     self.popularity = popularity
-    #     self.created_date = created_date
-    #     self.created_by = created_by
-    #     self.review = review
-    #     self.popularity = popularity
-
     def __repr__(self):
         return '<Dish %d>' % self.dish_id
+
+    @property
+    def validation(self):
+        print(self.unit_price)
+        dish_name = re.compile('^[a-zA-Z0-9 ]+[a-zA-Z0-9 ]$')
+        supplier_code = re.compile('^[A-Z].[A-Z]$')
+        if not supplier_code.match(self.supplier_code):
+            return "Supplier code not yet specified"
+        if not dish_name.match(self.dish_name):
+            return "Dish name contain invalid character or missing"
+        if self.unit_price > 99999999 or self.unit_price < 0:
+            return "Price amount not in range 0 - 99999999"
+        return "True"
 
     @property
     def serializable(self):
@@ -177,23 +200,6 @@ class CustomerOrders(Base):
     created_by = Column(Integer, nullable=False)
     review = Column(Integer, default=0, nullable=False)
     review_comment = Column(String)
-
-    def __init__(self, customer_order_id, order_id, order_date, user_id, on_behalf_of_customer, dish_id, quantity
-                 , unit_price, currency, personal_comment, created_date, created_by, review, review_comment):
-        self.customer_order_id = customer_order_id
-        self.order_id = order_id
-        self.order_date = order_date
-        self.user_id = user_id
-        self.on_behalf_of_customer = on_behalf_of_customer
-        self.dish_id = dish_id
-        self.quantity = quantity
-        self.unit_price = unit_price
-        self.currency = currency
-        self.personal_comment = personal_comment
-        self.created_date = created_date
-        self.created_by = created_by
-        self.review = review
-        self.review_comment = review_comment
 
     def __repr__(self):
         return '<CustomerOrdersNUM %d>' % self.customer_order_id

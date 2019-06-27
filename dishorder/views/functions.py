@@ -3,6 +3,7 @@ from dishorder import app
 from functools import wraps
 from flask import request, jsonify
 import cv2
+import re
 
 
 def deduplicate_image(img1_path, img2_path):
@@ -42,6 +43,17 @@ def verify_auth_token(token):
     return True
 
 
+def decode_auth_token(token):
+    s = Serializer(app.config['SECRET_KEY'], expires_in=60 * 60 * 2)
+    try:
+        data = s.loads(token)
+    except SignatureExpired:
+        return None  # valid token, but expired
+    except BadSignature:
+        return None  # invalid token
+    return data
+
+
 def login_required(f):
     @wraps(f)
     def decorated_function():
@@ -62,9 +74,12 @@ def login_required(f):
 
 
 def hour_minute_to_timestamp(string_hour_minute):
-    hour, minute = string_hour_minute.split(':')
-    total_second = (int(hour) * 60 * 60) + (int(minute) * 60)
-    return total_second
+    if string_hour_minute:
+        hour, minute = string_hour_minute.split(':')
+        total_second = (int(hour) * 60 * 60) + (int(minute) * 60)
+        return total_second
+    else:
+        return 0
 
 
 def timestamp_to_hour_minute(int_second):
@@ -72,3 +87,13 @@ def timestamp_to_hour_minute(int_second):
     base_hour = base_hour_with_odd / 60
     base_minute = base_hour_with_odd % 60
     return '{}:{}'.format(int(base_hour), int(base_minute))
+
+
+def validate_input(string, **kwargs):
+    is_space = kwargs.get('is_space')
+    if not is_space:
+        re_default = re.compile('^[a-zA-Z0-9]+[a-zA-Z0-9]$')
+        return re_default.match(string)
+    if is_space:
+        re_with_space_between = re.compile('^[a-zA-Z0-9 ]+[a-zA-Z0-9 ]$')
+        return re_with_space_between.match(string)

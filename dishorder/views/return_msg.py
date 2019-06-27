@@ -15,6 +15,11 @@ class ReturnMSG:
         self.no_selected_file = {"code": 15, "msg": "No selected file."}
         self.upload_successfully = {"code": 16, "msg": "Upload successfully."}
         self.return_supplier_list = {"code": 17, "msg": {}}
+        self.supplier_code_existed = {"code": 18, "msg": "Supplier code existed"}
+        self.supplier_name_existed = {"code": 19, "msg": "Supplier name existed"}
+        self.supplier_email_existed = {"code": 19, "msg": "Supplier email existed"}
+        self.supplier_code_invalid = {"code": 20, "msg": "Supplier code contain invalid character"}
+        self.fail_cheat = {"code": 21, "msg": ""}
 
     def register_success(self):
         return self.register_success
@@ -57,3 +62,12 @@ class ReturnMSG:
 
     def return_supplier_list(self):
         return self.return_supplier_list
+
+    def supplier_code_existed(self):
+        return self.supplier_code_existed
+
+    def supplier_code_invalid(self):
+        return self.supplier_code_invalid
+
+    def fail_cheat(self):
+        return self.fail_cheat
