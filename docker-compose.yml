@@ -1,0 +1,33 @@
+version: '3'
+
+volumes:
+  postgres_db_data: {}
+
+services:
+  web:
+    build: ./dishorder_BE/.
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./dishorder_BE/.:/code
+    environment:
+      FLASK_ENV: development
+  redis:
+    image: "redis:alpine"
+  postgres:
+    build: ./dishorder_BE/compose/postgres
+    container_name: "postgres_order"
+    ports:
+      - "5430:5432"
+    env_file:
+      - ./dishorder_BE/compose/.env/.local/.postgres
+    volumes:
+      - postgres_db_data:/var/lib/postgresql/data
+  dishorder-angular:
+    container_name: Dishorder-FE
+    build: ./dishorder_FE/.
+    volumes:
+      - ./dishorder_FE/.:/code
+      - /code/node_modules
+    ports:
+      - "4201:4200"
