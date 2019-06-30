@@ -12,8 +12,8 @@ from datetime import datetime
 import re
 
 app = Flask(__name__)
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://dishorder_PS:123456@postgres:5432/dishorder'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://dishorder_PS:123456@localhost:5430/dishorder'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://dishorder_PS:123456@postgres:5432/dishorder'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://dishorder_PS:123456@localhost:5430/dishorder'
 app.config['SECRET_KEY'] = 'trantrongtyckiuzk4ever!@#!!!@@##!*&%^$$#$'
 app.config['ALLOWED_EXTENSIONS'] = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
 app.config['UPLOAD_FOLDER'] = os.getcwd() + '/dishorder/uploads'
