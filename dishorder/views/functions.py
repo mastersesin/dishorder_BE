@@ -1,9 +1,10 @@
+from dishorder.views.models import *
 from itsdangerous import (TimedJSONWebSignatureSerializer as Serializer, BadSignature, SignatureExpired)
 from dishorder import app
 from functools import wraps
 from flask import request, jsonify
-import cv2
-import re
+import cv2, re, pytz, time
+from datetime import datetime
 
 
 def deduplicate_image(img1_path, img2_path):
@@ -97,3 +98,12 @@ def validate_input(string, **kwargs):
     if is_space:
         re_with_space_between = re.compile('^[a-zA-Z0-9 ]+[a-zA-Z0-9 ]$')
         return re_with_space_between.match(string)
+
+
+def get_timestamp_now():
+    return int(datetime.now(pytz.timezone('Asia/Saigon')).timestamp())
+
+
+def get_timestamp_by(month, day):
+    dt = datetime.strptime('2019-{}-{}'.format(month, day), '%Y-%m-%d')
+    return time.mktime(dt.timetuple())

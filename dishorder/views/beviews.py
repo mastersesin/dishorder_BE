@@ -10,6 +10,8 @@ from sqlalchemy.exc import IntegrityError
 import sys
 import os
 from sqlalchemy import update
+import time
+from dishorder.micro_service.automate_create_order import *
 
 dishorderapi = Blueprint('dishorderapi', __name__)
 
@@ -84,11 +86,11 @@ def suppliers():
 def products():
     print(request.args.get('from'))
     # first_day_of_month_count_from_monday_of_previous_month
-    date = calendar.monthrange(2019, 6)[0]
+    date = calendar.monthrange(2019, 7)[0]
     # month have ? day
-    month_have = calendar.monthrange(2019, 6)[1]
-    previous_month_have = calendar.monthrange(2019, 5)[1]
-    msg = {'previous_month': {}, 'this_month': {}}
+    month_have = calendar.monthrange(2019, 7)[1]
+    previous_month_have = calendar.monthrange(2019, 6)[1]
+    msg = {'previous_month': {}, 'this_month': {}, 'which_month_is_this': 7}
     for i in range(previous_month_have - date + 1, previous_month_have + 1):
         msg['previous_month'][i] = i
     for i in range(1, month_have + 1):
@@ -137,7 +139,7 @@ def register():
         family_name = request.json.get('family_name', None)
         photo_thumbnail = b''
         photo_default_id = 1
-        creation_date = app.config['TIMESTAMP_NOW_GMT7']
+        creation_date = get_timestamp_now()
         last_connection_date = 0
         profile = 0
         if not email_address or not password or not first_name:
@@ -282,7 +284,7 @@ def create_dish():
         currency = request.json.get('currency', '')
         review = 0
         popularity = 0
-        created_date = app.config['TIMESTAMP_NOW_GMT7']
+        created_date = get_timestamp_now()
         created_by = 0
         photo_thumbnail = b''
         uploaded_img_name = request.json.get('uploaded_img_name')
@@ -497,20 +499,46 @@ def dishes_lay():
 @dishorderapi.route('/foodorder', methods=['POST'])
 def food_order():
     dishchoose = request.json.get('dishchoose')
+    is_checked_order = []
     for dish in dishchoose:
+        order_day = dishchoose[dish]['orderday']
+        order_month = dishchoose[dish]['ordermonth']
+        if dishchoose[dish]['value']['supplier_code'] not in is_checked_order:
+            order_id = session.query(OrdersToSuppliers) \
+                .filter(OrdersToSuppliers.order_date == get_timestamp_by(order_month, order_day)) \
+                .filter(OrdersToSuppliers.supplier_code == dishchoose[dish]['value']['supplier_code']) \
+                .first()
+            if order_id:
+                order_id = order_id.order_id
+            else:
+                new_order_to_supplier = OrdersToSuppliers(supplier_code=dishchoose[dish]['value']['supplier_code'],
+                                                          order_date=get_timestamp_by(order_month,
+                                                                                      order_day),
+                                                          delivery_address='DI',
+                                                          total_amount=0,
+                                                          currency='VND',
+                                                          created_date=get_timestamp_now(),
+                                                          created_by=0,
+                                                          sent_date=None,
+                                                          order_comment='')
+                session.add(new_order_to_supplier)
+                session.commit()
+                order_id = new_order_to_supplier.order_id
+            is_checked_order.append(dishchoose[dish]['value']['supplier_code'])
+        else:
+            pass
         print(dishchoose[dish]['value'])
         token = request.json.get('token')
-        order_id = decode_auth_token(token=token)['id']
-        print(order_id)
-        print(dishchoose)
-        order_date = app.config['TIMESTAMP_NOW_GMT7']
-        user_id = order_id
+        print(decode_auth_token(token=token))
+        order_id = order_id
+        order_date = get_timestamp_by(order_month, order_day)
+        user_id = decode_auth_token(token=token)['id']
         on_behalf_of_customer = dishchoose[dish]['onbehalf']
         dish_id = dishchoose[dish]['key']
         quantity = dishchoose[dish]['quantity']
         unit_price = dishchoose[dish]['value']['unit_price']
         currency = dishchoose[dish]['value']['currency']
-        created_date = app.config['TIMESTAMP_NOW_GMT7']
+        created_date = get_timestamp_now()
         created_by = order_id
         review = 0
         review_comment = None
@@ -522,4 +550,36 @@ def food_order():
                                    review_comment=review_comment)
         session.add(new_order)
         session.commit()
+        update_order_to_supplier(order_id)
     return jsonify(ReturnMSG().register_success)
+
+
+@dishorderapi.route('/getallorders', methods=['GET'])
+def get_all_order():
+    all_order = session.query(OrdersToSuppliers).all()
+    msg = ReturnMSG().return_transaction_list
+    for order in all_order:
+        msg['msg'][order.order_id] = order.serializable
+    return jsonify(msg)
+
+
+@dishorderapi.route('/getalluserorders', methods=['GET'])
+def get_all_user_order():
+    supplier = request.args.get('supplier')
+    order_day = request.args.get('order_day')
+    all_order = session.query(CustomerOrders, Users, Dishes) \
+        .join(Users, CustomerOrders.user_id == Users.id) \
+        .join(Dishes, CustomerOrders.dish_id == Dishes.dish_id) \
+        .filter(Dishes.supplier_code == supplier) \
+        .filter(CustomerOrders.order_date >= get_timestamp_by(7, order_day)) \
+        .filter(CustomerOrders.order_date < get_timestamp_by(7, order_day) + 86400) \
+        .all()
+    print(all_order)
+    msg = ReturnMSG().return_transaction_list
+    for order in all_order:
+        print(order)
+        msg['msg'][order[0].customer_order_id] = order[0].serializable
+        msg['msg'][order[0].customer_order_id]['user_name'] = order[1].first_name
+        msg['msg'][order[0].customer_order_id]['dish_name'] = order[2].dish_name
+    print(msg)
+    return jsonify(msg)
