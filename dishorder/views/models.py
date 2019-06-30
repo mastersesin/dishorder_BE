@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship
 from dishorder import Base
 from .functions import *
 import re
+import calendar
 
 
 class Photos(Base):
@@ -185,8 +186,8 @@ class DishTags(Base):
 class CustomerOrders(Base):
     __tablename__ = 'customer_order'
     customer_order_id = Column(Integer, nullable=False, primary_key=True)
-    order_id = Column(Integer, ForeignKey('user.id'), default=0, nullable=False)
-    order_id_relationship = relationship('Users', backref='customer_order')
+    order_id = Column(Integer, ForeignKey('order_to_supplier.order_id'), default=0, nullable=False)
+    order_id_relationship = relationship('OrdersToSuppliers', backref='customer_order')
     order_date = Column(Integer, nullable=False)
     user_id = Column(Integer, nullable=False)
     on_behalf_of_customer = Column(String, nullable=False)
@@ -204,6 +205,14 @@ class CustomerOrders(Base):
     def __repr__(self):
         return '<CustomerOrdersNUM %d>' % self.customer_order_id
 
+    @property
+    def serializable(self):
+        return {
+            'on_behalf_of_customer': self.on_behalf_of_customer,
+            'quantity': self.quantity,
+            'unit_price': self.unit_price,
+        }
+
 
 class OrdersToSuppliers(Base):
     __tablename__ = 'order_to_supplier'
@@ -217,20 +226,25 @@ class OrdersToSuppliers(Base):
     order_comment = Column(String)
     created_date = Column(Integer, nullable=False)
     created_by = Column(Integer, nullable=False)
-    sent_date = Column(Integer, nullable=False)
-
-    def __init__(self, order_id, supplier_code, order_date, delivery_address, total_amount, currency, order_comment
-                 , created_date, created_by, sent_date):
-        self.order_id = order_id
-        self.supplier_code = supplier_code
-        self.order_date = order_date
-        self.delivery_address = delivery_address
-        self.total_amount = total_amount
-        self.currency = currency
-        self.order_comment = order_comment
-        self.created_date = created_date
-        self.created_by = created_by
-        self.sent_date = sent_date
+    sent_date = Column(Integer)
 
     def __repr__(self):
         return '<OrdersToSupplierNUM %d>' % self.order_id
+
+    @property
+    def serializable(self):
+        dtobj = datetime.fromtimestamp(self.order_date)
+        return {
+            'order_id': self.order_id,
+            'supplier_code': self.supplier_code,
+            'order_day': '{}'.format(dtobj.day),
+            'order_month': '{}'.format(calendar.month_name[dtobj.month]),
+            'order_day_word': '{}'.format(calendar.day_name[dtobj.day % 7 - 1]),
+            'delivery_address': self.delivery_address,
+            'total_amount': self.total_amount,
+            'currency': self.currency,
+            'order_comment': self.order_comment,
+            'created_date': self.created_date,
+            'created_by': self.created_by,
+            'sent_date': self.sent_date,
+        }
