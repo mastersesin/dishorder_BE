@@ -12,6 +12,7 @@ import os
 from sqlalchemy import update
 import time
 from dishorder.micro_service.automate_create_order import *
+from dishorder.views.classes import FormValidator
 
 dishorderapi = Blueprint('dishorderapi', __name__)
 
@@ -128,37 +129,45 @@ def login():
 @dishorderapi.route('/register', methods=['POST'])
 def register():
     if request.is_json:
-        email_address = request.json.get('email_address', '')
-        is_email_address_existed = session.query(Users).filter(Users.email_address == email_address).first()
-        if is_email_address_existed:
-            msg = ReturnMSG().fail_cheat
-            msg['msg'] = 'Email address {} existed'.format(email_address)
-            return jsonify(msg)
-        password = request.json.get('password', '')
-        first_name = request.json.get('first_name')
+        email_address = request.json.get('email_address', None)
+        password = request.json.get('password', None)
+        retype_password = request.json.get('retype_password', None)
+        first_name = request.json.get('first_name', None)
         family_name = request.json.get('family_name', None)
         photo_thumbnail = b''
         photo_default_id = 1
         creation_date = get_timestamp_now()
         last_connection_date = 0
         profile = 0
-        if not email_address or not password or not first_name:
+        print(email_address, password, retype_password, first_name, family_name, file=sys.stderr)
+        if not email_address or not password or not first_name or not retype_password:
             return jsonify(ReturnMSG().wrong_post_format)
         else:
-            new_user = Users(email_address=email_address, password=password, first_name=first_name,
-                             family_name=family_name,
-                             photo_thumbnail=photo_thumbnail, photo_default_id=photo_default_id,
-                             creation_date=creation_date,
-                             last_connection_date=last_connection_date, profile=profile)
-            validation_return = new_user.validation
-            if not validation_return == "True":
-                msg = ReturnMSG().fail_cheat
-                msg['msg'] = validation_return
-                return jsonify(msg)
+            validator = FormValidator()
+            if validator.email_validation(email_address):
+                if validator.password_match(password, retype_password):
+                    is_email_address_existed = session.query(Users).filter(Users.email_address == email_address).first()
+                    if not is_email_address_existed:
+                        new_user = Users(email_address=email_address, password=password, first_name=first_name,
+                                         family_name=family_name,
+                                         photo_thumbnail=photo_thumbnail, photo_default_id=photo_default_id,
+                                         creation_date=creation_date,
+                                         last_connection_date=last_connection_date, profile=profile)
+                        session.add(new_user)
+                        session.commit()
+                        return jsonify(ReturnMSG().register_success)
+                    else:
+                        msg = ReturnMSG().fail_cheat
+                        msg['msg'] = 'Email address {} existed'.format(email_address)
+                        return jsonify(msg)
+                else:
+                    msg = ReturnMSG().fail_cheat
+                    msg['msg'] = 'Password do not match'
+                    return jsonify(msg)
             else:
-                session.add(new_user)
-                session.commit()
-                return jsonify(ReturnMSG().register_success)
+                msg = ReturnMSG().fail_cheat
+                msg['msg'] = 'Email address contain invalid character or incorrect format'
+                return jsonify(msg)
     else:
         return jsonify(ReturnMSG().wrong_post_format)
 
