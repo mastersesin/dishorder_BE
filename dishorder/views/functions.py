@@ -5,6 +5,7 @@ from functools import wraps
 from flask import request, jsonify
 import cv2, re, pytz, time
 from datetime import datetime
+from math import log, ceil
 
 
 def deduplicate_image(img1_path, img2_path):
@@ -107,3 +108,16 @@ def get_timestamp_now():
 def get_timestamp_by(month, day):
     dt = datetime.strptime('2019-{}-{}'.format(month, day), '%Y-%m-%d')
     return time.mktime(dt.timetuple())
+
+
+def safe_cast(val, to_type, default=None):
+    try:
+        return to_type(val)
+    except (ValueError, TypeError):
+        return default
+
+
+def bytes_needed(n):
+    if n == 0 or n == 1:
+        return 1
+    return ceil(log(n*2 + 1, 256))
