@@ -36,8 +36,11 @@ def upload():
         msg = ReturnMSG().no_selected_file
         return jsonify(msg)
     if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        try:
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        except:
+            pass
         msg = ReturnMSG().upload_successfully
         msg['msg'] = filename
         return jsonify(msg)
