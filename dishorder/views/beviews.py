@@ -13,6 +13,7 @@ from sqlalchemy import update
 import time
 from dishorder.micro_service.automate_create_order import *
 from dishorder.views.classes import FormValidator
+from random import randint
 
 dishorderapi = Blueprint('dishorderapi', __name__)
 
@@ -36,11 +37,10 @@ def upload():
         msg = ReturnMSG().no_selected_file
         return jsonify(msg)
     if file and allowed_file(file.filename):
-        try:
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        except:
-            pass
+        filename = secure_filename(file.filename)
+        while os.path.exists(os.path.join(app.config['UPLOAD_FOLDER'], filename)):
+            filename = filename + str(randint(0, 9999999999))
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         msg = ReturnMSG().upload_successfully
         msg['msg'] = filename
         return jsonify(msg)
