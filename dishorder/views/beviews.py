@@ -1,19 +1,15 @@
-import flask
 from flask import jsonify, Blueprint, abort, Flask, send_file
 from .functions import *
 from .return_msg import ReturnMSG
-from dishorder import session
-from .models import *
-import calendar
 from werkzeug.utils import secure_filename
 from sqlalchemy.exc import IntegrityError
 import sys
 import os
-from sqlalchemy import update
-import time
 from dishorder.micro_service.automate_create_order import *
 from dishorder.views.classes import FormValidator
 from random import randint
+import datetime
+import time
 
 dishorderapi = Blueprint('dishorderapi', __name__)
 
@@ -86,15 +82,37 @@ def suppliers():
     # return jsonify(msg)
 
 
+@dishorderapi.route('/dashboard', methods=['GET'])
+@login_required
+def get_dashboard(guard_msg):
+    if isinstance(guard_msg['guard_msg'], str) == 'Warn':
+        abort(400)
+    else:
+        user_id = guard_msg['guard_msg']['user_id']
+        user_profile = guard_msg['guard_msg']['user_profile']
+        now = datetime.datetime.now()
+        s = '01/{}/2019'.format(now.month)
+        a = time.mktime(datetime.datetime.strptime(s, "%d/%m/%Y").timetuple())
+        print(a, file=sys.stderr)
+        users_object = session.query(CustomerOrders)\
+            .filter_by(user_id=user_id)\
+            .filter(CustomerOrders.order_date >= a)\
+            .all()
+        for ordered_dish in users_object:
+            print(ordered_dish.order_date, file=sys.stderr)
+    return jsonify(guard_msg)
+
+
 @dishorderapi.route('/products', methods=['GET'])
 def products():
+    now = datetime.datetime.now()
     print(request.args.get('from'))
     # first_day_of_month_count_from_monday_of_previous_month
-    date = calendar.monthrange(2019, 7)[0]
+    date = calendar.monthrange(now.year, now.month)[0]
     # month have ? day
-    month_have = calendar.monthrange(2019, 7)[1]
-    previous_month_have = calendar.monthrange(2019, 6)[1]
-    msg = {'previous_month': {}, 'this_month': {}, 'which_month_is_this': 7}
+    month_have = calendar.monthrange(now.year, now.month)[1]
+    previous_month_have = calendar.monthrange(now.year, now.month-1)[1]
+    msg = {'previous_month': {}, 'this_month': {}, 'which_month_is_this': now.month}
     for i in range(previous_month_have - date + 1, previous_month_have + 1):
         msg['previous_month'][i] = i
     for i in range(1, month_have + 1):
@@ -545,7 +563,7 @@ def food_order():
                                                           currency='VND',
                                                           created_date=get_timestamp_now(),
                                                           created_by=0,
-                                                          sent_date=None,
+                                                          sent_date=0,
                                                           order_comment='')
                 session.add(new_order_to_supplier)
                 session.commit()

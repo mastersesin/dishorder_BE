@@ -60,13 +60,17 @@ def login_required(f):
     @wraps(f)
     def decorated_function():
         try:
-            auth_header = request.headers.get('Authorization').split()
-            user_token = auth_header[1]
-            s = Serializer(app.config['SECRET_KEY'], expires_in=60 * 60 * 2)
-            token_loaded = s.loads(user_token)
-            user_id = token_loaded['id']
-            user_profile = token_loaded['profile']
-            return f({'guard_msg': {'user_id': user_id, 'user_profile': user_profile}})
+            auth_header = request.headers.get('Authorization')
+            if auth_header:
+                auth_header = auth_header.split()
+                user_token = auth_header[1]
+                s = Serializer(app.config['SECRET_KEY'], expires_in=60 * 60 * 2)
+                token_loaded = s.loads(user_token)
+                user_id = token_loaded['id']
+                user_profile = token_loaded['profile']
+                return f({'guard_msg': {'user_id': user_id, 'user_profile': user_profile}})
+            else:
+                return f({'guard_msg': 'Authorization header not present'})
         except SignatureExpired:
             return f({'guard_msg': 'Token Expired'})
         except BadSignature:
