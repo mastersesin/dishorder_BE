@@ -239,7 +239,7 @@ class OrdersToSuppliers(Base):
             'supplier_code': self.supplier_code,
             'order_day': '{}'.format(dtobj.day),
             'order_month': '{}'.format(calendar.month_name[dtobj.month]),
-            'order_day_word': '{}'.format(calendar.day_name[dtobj.day % 7 - 1]),
+            'order_day_word': '{}'.format(calendar.day_name[(1 % 7 - 1) + 3]),
             'delivery_address': self.delivery_address,
             'total_amount': self.total_amount,
             'currency': self.currency,

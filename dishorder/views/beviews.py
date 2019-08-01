@@ -436,7 +436,7 @@ def edit_supplier():
             pass
         name = request.json.get('name', '')
         email_address = request.json.get('email_address', '')
-        supplier_current_email = session.query(Suppliers).filter_by(email_address=email_address).first()
+        supplier_current_email = session.query(Suppliers).filter_by(code=code_change_to).first()
         if supplier_current_email.email_address != email_address:
             check_email = session.query(Suppliers).filter_by(email_address=email_address).first()
             if check_email:
