@@ -20,6 +20,16 @@ class ReturnMSG:
         self.supplier_email_existed = {"code": 19, "msg": "Supplier email existed"}
         self.supplier_code_invalid = {"code": 20, "msg": "Supplier code contain invalid character"}
         self.fail_cheat = {"code": 21, "msg": ""}
+        self.permission_denied = {"code": 22, "msg": "Permission Denied"}
+        self.four_hundred = {"code": 23, "msg": "No No No"}
+        self.delete_order_success = {"code": 24, "msg": "Delete OK"}
+        self.order_not_exist = {"code": 25, "msg": "Order not exist"}
+
+    def delete_order_success(self):
+        return self.delete_order_success
+
+    def order_not_exist(self):
+        return self.order_not_exist
 
     def register_success(self):
         return self.register_success
@@ -71,3 +81,6 @@ class ReturnMSG:
 
     def fail_cheat(self):
         return self.fail_cheat
+
+    def permission_denied(self):
+        return self.permission_denied

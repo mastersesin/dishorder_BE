@@ -611,12 +611,14 @@ def get_all_order():
 def get_all_user_order():
     supplier = request.args.get('supplier')
     order_day = request.args.get('order_day')
+    order_month = request.args.get('order_month')
+    abbr_to_num = {name: num for num, name in enumerate(calendar.month_abbr) if num}
     all_order = session.query(CustomerOrders, Users, Dishes) \
         .join(Users, CustomerOrders.user_id == Users.id) \
         .join(Dishes, CustomerOrders.dish_id == Dishes.dish_id) \
         .filter(Dishes.supplier_code == supplier) \
-        .filter(CustomerOrders.order_date >= get_timestamp_by(7, order_day)) \
-        .filter(CustomerOrders.order_date < get_timestamp_by(7, order_day) + 86400) \
+        .filter(CustomerOrders.order_date >= get_timestamp_by(abbr_to_num[order_month[:3]], order_day)) \
+        .filter(CustomerOrders.order_date < get_timestamp_by(abbr_to_num[order_month[:3]], order_day) + 86400) \
         .all()
     print(all_order)
     msg = ReturnMSG().return_transaction_list
@@ -627,3 +629,33 @@ def get_all_user_order():
         msg['msg'][order[0].customer_order_id]['dish_name'] = order[2].dish_name
     print(msg)
     return jsonify(msg)
+
+
+@dishorderapi.route('/userorders', methods=['DELETE'])
+def delete_user_order():
+    if request.is_json:
+        user_token = request.headers.get('Authorization', None)
+        customer_order_id = request.json.get('customer_order_id', None)
+        if user_token or customer_order_id:
+            # decode_auth_token included valid / expire check None will return if invalid
+            user_token_data = decode_auth_token(user_token.split()[1])
+            if user_token_data:
+                order_need_to_delete = session.query(CustomerOrders)\
+                    .filter(CustomerOrders.customer_order_id == customer_order_id)\
+                    .first()
+                if order_need_to_delete:
+                    if order_need_to_delete.user_id == int(user_token_data['user_id'])\
+                            or int(user_token_data['user_profile']) == 1:
+                        session.delete(order_need_to_delete)
+                        session.commit()
+                        return jsonify(ReturnMSG().delete_order_success)
+                    else:
+                        return jsonify(ReturnMSG().permission_denied)
+                else:
+                    return jsonify(ReturnMSG().order_not_exist)
+            else:
+                abort(400)
+        else:
+            abort(400)
+    else:
+        abort(400)

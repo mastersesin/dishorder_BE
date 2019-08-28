@@ -12,13 +12,13 @@ from datetime import datetime
 import re
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://dishorder_PS:123456@postgres:5432/dishorder'
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://dishorder_PS:123456@localhost:5430/dishorder'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://dishorder_PS:123456@postgres:5432/dishorder'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://dishorder_PS:123456@localhost:5430/dishorder'
 app.config['SECRET_KEY'] = 'trantrongtyckiuzk4ever!@#!!!@@##!*&%^$$#$'
 app.config['ALLOWED_EXTENSIONS'] = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
 app.config['UPLOAD_FOLDER'] = os.getcwd() + '/dishorder/uploads'
 app.config['TIMESTAMP_START'] = int(datetime.now(pytz.timezone('Asia/Saigon')).timestamp())
-app.config['API_ADDRESS'] = 'http://localhost:5000/'
+app.config['API_ADDRESS'] = 'http://localhost:3001/'
 app.config['IMG_URI'] = 'img/'
 app.config['VALID_INPUT_STRING_REGEX_COMPILED'] = re.compile('^[a-zA-Z0-9]+[a-zA-Z0-9]$')
 # os.popen('mkdir {}/dishorder/uploads'.format(os.getcwd()))
