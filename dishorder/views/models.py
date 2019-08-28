@@ -142,7 +142,7 @@ class Dishes(Base):
     def validation(self):
         print(self.unit_price)
         dish_name = re.compile('^[a-zA-Z0-9 ]+[a-zA-Z0-9 ]$')
-        supplier_code = re.compile('^[A-Z].[A-Z]$')
+        supplier_code = re.compile('^[A-Za-z].[A-Za-z]$')
         if not supplier_code.match(self.supplier_code):
             return "Supplier code not yet specified"
         if not dish_name.match(self.dish_name):
