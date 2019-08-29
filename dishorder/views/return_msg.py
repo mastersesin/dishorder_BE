@@ -24,6 +24,10 @@ class ReturnMSG:
         self.four_hundred = {"code": 23, "msg": "No No No"}
         self.delete_order_success = {"code": 24, "msg": "Delete OK"}
         self.order_not_exist = {"code": 25, "msg": "Order not exist"}
+        self.login_proposal_not_yet_accepted = {"code": 26, "msg": "Login proposal not yet accepted"}
+
+    def login_proposal_not_yet_accepted(self):
+        return self.login_proposal_not_yet_accepted
 
     def delete_order_success(self):
         return self.delete_order_success

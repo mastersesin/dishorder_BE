@@ -49,7 +49,7 @@ def decode_auth_token(token):
     s = Serializer(app.config['SECRET_KEY'], expires_in=60 * 60 * 2)
     try:
         data = s.loads(token)
-        print(data)
+        print(data, 'hihi')
         user_id = data['id']
         user_profile = data['profile']
         data = {'user_id': user_id, 'user_profile': user_profile}

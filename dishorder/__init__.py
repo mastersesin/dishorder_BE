@@ -5,6 +5,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.exc import SQLAlchemyError
+from flask_mail import Mail, Message
 import time
 import os
 import pytz
@@ -22,6 +23,12 @@ app.config['API_ADDRESS'] = 'http://localhost:3001/'
 app.config['IMG_URI'] = 'img/'
 app.config['VALID_INPUT_STRING_REGEX_COMPILED'] = re.compile('^[a-zA-Z0-9]+[a-zA-Z0-9]$')
 # os.popen('mkdir {}/dishorder/uploads'.format(os.getcwd()))
+app.config['MAIL_SERVER'] = '10.84.128.25'
+app.config['MAIL_PORT'] = 25
+app.config['MAIL_USE_TLS'] = False
+app.config['MAIL_USE_SSL'] = False
+app.config['MAIL_DEFAULT_SENDER'] = "DI Ltd. Reception<reception@diltd.com.vn>"
+a = 1
 CORS(app)
 while True:
     try:
@@ -33,6 +40,7 @@ while True:
         Session = sessionmaker()
         Session.configure(bind=engine)
         session = Session()
+        mail = Mail(app)
         break
     except SQLAlchemyError as ex:
         print(ex)

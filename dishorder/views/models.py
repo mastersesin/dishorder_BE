@@ -35,6 +35,8 @@ class Users(Base):
     creation_date = Column(Integer, default=0, nullable=False)
     last_connection_date = Column(Integer, default=0, nullable=False)
     profile = Column(Integer, default=0)
+    register_proposal_status = Column(Integer, default=0)
+    register_secret_code = Column(Integer, default=0)
 
     def __repr__(self):
         return '<User %d>' % self.id

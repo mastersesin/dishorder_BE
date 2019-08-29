@@ -10,6 +10,8 @@ from dishorder.views.classes import FormValidator
 from random import randint
 import datetime
 import time
+from flask_mail import Message
+from dishorder import mail
 
 dishorderapi = Blueprint('dishorderapi', __name__)
 
@@ -94,9 +96,9 @@ def get_dashboard(guard_msg):
         s = '01/{}/2019'.format(now.month)
         a = time.mktime(datetime.datetime.strptime(s, "%d/%m/%Y").timetuple())
         print(a, file=sys.stderr)
-        users_object = session.query(CustomerOrders)\
-            .filter_by(user_id=user_id)\
-            .filter(CustomerOrders.order_date >= a)\
+        users_object = session.query(CustomerOrders) \
+            .filter_by(user_id=user_id) \
+            .filter(CustomerOrders.order_date >= a) \
             .all()
         for ordered_dish in users_object:
             print(ordered_dish.order_date, file=sys.stderr)
@@ -111,7 +113,7 @@ def products():
     date = calendar.monthrange(now.year, now.month)[0]
     # month have ? day
     month_have = calendar.monthrange(now.year, now.month)[1]
-    previous_month_have = calendar.monthrange(now.year, now.month-1)[1]
+    previous_month_have = calendar.monthrange(now.year, now.month - 1)[1]
     msg = {'previous_month': {}, 'this_month': {}, 'which_month_is_this': now.month}
     for i in range(previous_month_have - date + 1, previous_month_have + 1):
         msg['previous_month'][i] = i
@@ -132,11 +134,13 @@ def login():
             users_object = session.query(Users).filter_by(email_address=email_address)
             if users_object.count() == 1:
                 users_object = users_object[0]  # GET First Record
-                if users_object.password == password:
+                if users_object.password == password and users_object.register_proposal_status == 1:
                     msg = ReturnMSG().return_token
                     msg['msg'] = generate_auth_token(user_id=users_object.id,
                                                      profile=users_object.profile)
                     return jsonify(msg)
+                elif users_object.register_proposal_status == 0:
+                    return jsonify(ReturnMSG().login_proposal_not_yet_accepted)
                 else:
                     return jsonify(ReturnMSG().username_or_password_incorrect)
             elif users_object.count() == 0:
@@ -173,7 +177,9 @@ def register():
                                          family_name=family_name,
                                          photo_thumbnail=photo_thumbnail, photo_default_id=photo_default_id,
                                          creation_date=creation_date,
-                                         last_connection_date=last_connection_date, profile=profile)
+                                         last_connection_date=last_connection_date, profile=profile,
+                                         register_proposal_status=0,
+                                         register_secret_code=randint(2, 9999999999))
                         session.add(new_user)
                         session.commit()
                         return jsonify(ReturnMSG().register_success)
@@ -579,8 +585,9 @@ def food_order():
         print(decode_auth_token(token=token))
         order_id = order_id
         order_date = get_timestamp_by(order_month, order_day)
-        user_id = decode_auth_token(token=token)['id']
+        user_id = decode_auth_token(token=token)['user_id']
         on_behalf_of_customer = dishchoose[dish]['onbehalf']
+        personal_comment = dishchoose[dish]['personal_comment']
         dish_id = dishchoose[dish]['key']
         quantity = dishchoose[dish]['quantity']
         unit_price = dishchoose[dish]['value']['unit_price']
@@ -594,7 +601,7 @@ def food_order():
                                    on_behalf_of_customer=on_behalf_of_customer, dish_id=dish_id,
                                    quantity=quantity, unit_price=unit_price, currency=currency,
                                    created_date=created_date, created_by=created_by, review=review,
-                                   review_comment=review_comment)
+                                   review_comment=review_comment, personal_comment=personal_comment)
         session.add(new_order)
         session.commit()
         update_order_to_supplier(order_id)
@@ -606,7 +613,10 @@ def get_all_order():
     all_order = session.query(OrdersToSuppliers).all()
     msg = ReturnMSG().return_transaction_list
     for order in all_order:
-        msg['msg'][order.order_id] = order.serializable
+        if order.total_amount > 0:
+            msg['msg'][order.order_id] = order.serializable
+        else:
+            pass
     return jsonify(msg)
 
 
@@ -634,31 +644,66 @@ def get_all_user_order():
     return jsonify(msg)
 
 
-@dishorderapi.route('/userorders', methods=['DELETE'])
-def delete_user_order():
-    if request.is_json:
-        user_token = request.headers.get('Authorization', None)
-        customer_order_id = request.json.get('customer_order_id', None)
-        if user_token or customer_order_id:
-            # decode_auth_token included valid / expire check None will return if invalid
-            user_token_data = decode_auth_token(user_token.split()[1])
-            if user_token_data:
-                order_need_to_delete = session.query(CustomerOrders)\
-                    .filter(CustomerOrders.customer_order_id == customer_order_id)\
-                    .first()
-                if order_need_to_delete:
-                    if order_need_to_delete.user_id == int(user_token_data['user_id'])\
-                            or int(user_token_data['user_profile']) == 1:
-                        session.delete(order_need_to_delete)
-                        session.commit()
-                        return jsonify(ReturnMSG().delete_order_success)
-                    else:
-                        return jsonify(ReturnMSG().permission_denied)
+@dishorderapi.route('/userorders/<customer_order_id>', methods=['DELETE'])
+def delete_user_order(customer_order_id):
+    user_token = request.headers.get('Authorization', None)
+    if user_token or customer_order_id:
+        # decode_auth_token included valid / expire check None will return if invalid
+        print(user_token)
+        user_token_data = decode_auth_token(user_token.split()[1])
+        print(user_token_data)
+        if user_token_data:
+            order_need_to_delete = session.query(CustomerOrders) \
+                .filter(CustomerOrders.customer_order_id == customer_order_id) \
+                .first()
+            if order_need_to_delete:
+                if order_need_to_delete.user_id == int(user_token_data['user_id']) \
+                        or int(user_token_data['user_profile']) == 1:
+                    session.delete(order_need_to_delete)
+                    session.commit()
+                    update_order_to_supplier(order_need_to_delete.order_id)
+                    return jsonify(ReturnMSG().delete_order_success)
                 else:
-                    return jsonify(ReturnMSG().order_not_exist)
+                    return jsonify(ReturnMSG().permission_denied)
             else:
-                abort(400)
+                return jsonify(ReturnMSG().order_not_exist)
         else:
             abort(400)
     else:
         abort(400)
+
+
+@dishorderapi.route('/userproposal/<user_id>/<code>', methods=['GET'])
+def user_proposal(user_id, code):
+    proposal_user_id = session.query(Users).filter(Users.id == user_id).first()
+    if int(proposal_user_id.register_secret_code) == int(code) and int(proposal_user_id.register_proposal_status) != 1:
+        proposal_user_id.register_proposal_status = 1
+        session.commit()
+        return jsonify({"code": 999, "msg": "OK. User Approved."})
+    elif int(proposal_user_id.register_proposal_status) == 1:
+        return jsonify({"code": 1000, "msg": "Error. User has been approved already."})
+    else:
+        return jsonify({"code": 1001, "msg": "Wrong code"})
+
+
+@dishorderapi.route('/mailto', methods=['POST'])
+def send_mail():
+    data = request.get_json()
+    mail.send('hihi')
+    print(data['recipients']);
+    if data['cc']:
+        msg = Message(subject=data['subject'], recipients=data['recipients'], body=data['body'], html=None,
+                      sender=app.config['MAIL_DEFAULT_SENDER'], cc=None, bcc=None, attachments=None,
+                      reply_to='trantrongty160995@gmail.com',
+                      date=None, charset=None, extra_headers=None, mail_options=None, rcpt_options=None);
+    else:
+        msg = Message(subject=data['subject'], recipients=data['recipients'], body=data['body'], html=None,
+                      sender=app.config['MAIL_DEFAULT_SENDER'], cc=data['cc'], bcc=None, attachments=None,
+                      reply_to='trantrongty160995@gmail.com',
+                      date=None, charset=None, extra_headers=None, mail_options=None, rcpt_options=None);
+    try:
+        mail.send(msg)
+    except:
+        pass
+
+    return jsonify(status="Mail sent")
