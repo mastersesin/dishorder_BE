@@ -15,7 +15,7 @@ import re
 app = Flask(__name__)
 # app.config[
 #    'SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:ckiuzk4ever@database-2.cjyp0xzhpykc.us-east-2.rds.amazonaws.com:5432/dishorder'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://dishorder_PS:123456@localhost:5432/dishorder'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://dishorder_PS:123456@10.84.128.31:5430/dishorder'
 app.config['SECRET_KEY'] = 'trantrongtyckiuzk4ever!@#!!!@@##!*&%^$$#$'
 app.config['ALLOWED_EXTENSIONS'] = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
 app.config['UPLOAD_FOLDER'] = os.getcwd() + '/dishorder/uploads'
