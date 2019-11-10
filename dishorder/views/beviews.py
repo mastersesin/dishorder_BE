@@ -441,65 +441,61 @@ def edit_supplier():
         review = 0
         popularity = 0
         photo_thumbnail = b''
+        print(code, name, email_address, phone, contact_name, currency, uploaded_img_name, order_time_deadline,
+              minimum_order_quantity, minimum_order_amount)
         if not code or not name or not email_address or not phone or not contact_name \
                 or not currency or not order_time_deadline or not minimum_order_quantity \
                 or not minimum_order_amount:
             return jsonify(ReturnMSG().wrong_post_format)
         else:
-            is_code_existed = session.query(Suppliers).filter(Suppliers.code == code).first()
-            if is_code_existed:
-                validator = FormValidator()
-                supplier_need_to_edit = session.query(Suppliers).filter(Suppliers.code == code).first()
-                supplier_need_to_edit_current_email = supplier_need_to_edit.email_address
-                if supplier_need_to_edit_current_email != email_address:
-                    is_email_existed = session.query(Suppliers).filter(Suppliers.email_address == email_address).first()
-                else:
-                    is_email_existed = False
-                if not is_email_existed and validator.email_validation(email_address):
-                    if isinstance(safe_cast(minimum_order_quantity, int), int) \
-                            and isinstance(safe_cast(minimum_order_amount, int), int):
-                        if not (int(minimum_order_amount) < 0 or int(minimum_order_quantity) < 0) \
-                                and bytes_needed(int(minimum_order_quantity)) <= 4 \
-                                and bytes_needed(int(minimum_order_amount)) <= 4:
-                            minimum_order_quantity = int(minimum_order_quantity)
-                            minimum_order_amount = int(minimum_order_amount)
-                            order_time_deadline = hour_minute_to_timestamp(order_time_deadline)
-                            if uploaded_img_name:
-                                new_supplier_photo = Photos(photo_type='supplier',
-                                                            type_id=0,
-                                                            path=uploaded_img_name)
-                                session.add(new_supplier_photo)
-                                session.commit()
-                                uploaded_img_id = session.query(Photos).filter_by(path=uploaded_img_name).first().id
-                                photo_default_id = uploaded_img_id
-                            else:
-                                photo_default_id = 1
-                            supplier_need_to_edit.name = name
-                            supplier_need_to_edit.email_address = email_address
-                            supplier_need_to_edit.phone = phone
-                            supplier_need_to_edit.contact_name = contact_name
-                            supplier_need_to_edit.currency = currency
-                            supplier_need_to_edit.order_time_deadline = order_time_deadline
-                            supplier_need_to_edit.minimum_order_quantity = minimum_order_quantity
-                            supplier_need_to_edit.minimum_order_amount = minimum_order_amount
-                            supplier_need_to_edit.photo_default_id = photo_default_id
+            validator = FormValidator()
+            supplier_need_to_edit = session.query(Suppliers).filter(Suppliers.code == code).first()
+            supplier_need_to_edit_current_email = supplier_need_to_edit.email_address
+            if supplier_need_to_edit_current_email != email_address:
+                is_email_existed = session.query(Suppliers).filter(Suppliers.email_address == email_address).first()
+            else:
+                is_email_existed = False
+            if not is_email_existed and validator.email_validation(email_address):
+                if isinstance(safe_cast(minimum_order_quantity, int), int) \
+                        and isinstance(safe_cast(minimum_order_amount, int), int):
+                    if not (int(minimum_order_amount) < 0 or int(minimum_order_quantity) < 0) \
+                            and bytes_needed(int(minimum_order_quantity)) <= 4 \
+                            and bytes_needed(int(minimum_order_amount)) <= 4:
+                        minimum_order_quantity = int(minimum_order_quantity)
+                        minimum_order_amount = int(minimum_order_amount)
+                        order_time_deadline = hour_minute_to_timestamp(order_time_deadline)
+                        if uploaded_img_name:
+                            new_supplier_photo = Photos(photo_type='supplier',
+                                                        type_id=0,
+                                                        path=uploaded_img_name)
+                            session.add(new_supplier_photo)
                             session.commit()
-                            return jsonify(ReturnMSG().register_success)
+                            uploaded_img_id = session.query(Photos).filter_by(path=uploaded_img_name).first().id
+                            photo_default_id = uploaded_img_id
+                            supplier_need_to_edit.photo_default_id = photo_default_id
                         else:
-                            msg = ReturnMSG().fail_cheat
-                            msg['msg'] = 'Order quantity or Order amount invalid (not in range 0 - 2147483647)'
-                            return jsonify(msg)
+                            pass
+                        supplier_need_to_edit.name = name
+                        supplier_need_to_edit.email_address = email_address
+                        supplier_need_to_edit.phone = phone
+                        supplier_need_to_edit.contact_name = contact_name
+                        supplier_need_to_edit.currency = currency
+                        supplier_need_to_edit.order_time_deadline = order_time_deadline
+                        supplier_need_to_edit.minimum_order_quantity = minimum_order_quantity
+                        supplier_need_to_edit.minimum_order_amount = minimum_order_amount
+                        session.commit()
+                        return jsonify(ReturnMSG().register_success)
                     else:
                         msg = ReturnMSG().fail_cheat
-                        msg['msg'] = 'Order quantity or Order amount contain invalid character'
+                        msg['msg'] = 'Order quantity or Order amount invalid (not in range 0 - 2147483647)'
                         return jsonify(msg)
                 else:
                     msg = ReturnMSG().fail_cheat
-                    msg['msg'] = 'Supplier email {} existed or not in correct format'.format(email_address)
+                    msg['msg'] = 'Order quantity or Order amount contain invalid character'
                     return jsonify(msg)
             else:
                 msg = ReturnMSG().fail_cheat
-                msg['msg'] = 'Supplier code {} not existed'.format(code)
+                msg['msg'] = 'Supplier email {} existed or not in correct format'.format(email_address)
                 return jsonify(msg)
     else:
         return jsonify(ReturnMSG().wrong_post_format)
